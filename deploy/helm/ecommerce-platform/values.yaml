@@ -1,0 +1,176 @@
+# ==============================================================================
+# E-COMMERCE MICROSERVICES PLATFORM - PARENT VALUES
+# ==============================================================================
+
+# Global configurations shared across all subcharts
+global:
+  environment: production
+  sharedSecretName: ecommerce-shared-secrets
+  jwtSecret: "super-secret-jwt-key-change-in-production"
+  jwtExpiration: "3600s"
+  
+  mysql:
+    host: "ecommerce-mysql"
+    port: 3306
+    database: "ecommerce"
+    rootPassword: "rootpassword"
+    user: "ecommerce_user"
+    password: "ecommerce_password"
+    
+  redis:
+    host: "ecommerce-redis"
+    port: 6379
+    url: "redis://ecommerce-redis:6379"
+
+  rabbitmq:
+    host: "ecommerce-rabbitmq"
+    port: 5672
+    managementPort: 15672
+    username: "guest"
+    password: "guest"
+    url: "amqp://guest:guest@ecommerce-rabbitmq:5672"
+
+# Namespace management
+namespace:
+  create: true
+  name: ecommerce
+
+# Subchart configurations & overrides
+api-gateway:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: ecommerce/api-gateway
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 3000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+auth-service:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: ecommerce/auth-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 3001
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+order-service:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: ecommerce/order-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 3002
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+inventory-service:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: ecommerce/inventory-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 3003
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+notification-service:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: ecommerce/notification-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 3004
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+mysql:
+  enabled: true
+  storage: 1Gi
+  image:
+    repository: mysql
+    tag: "8.0"
+    pullPolicy: IfNotPresent
+
+redis:
+  enabled: true
+  storage: 1Gi
+  image:
+    repository: redis
+    tag: 7-alpine
+    pullPolicy: IfNotPresent
+
+rabbitmq:
+  enabled: true
+  storage: 1Gi
+  image:
+    repository: rabbitmq
+    tag: 3-management
+    pullPolicy: IfNotPresent

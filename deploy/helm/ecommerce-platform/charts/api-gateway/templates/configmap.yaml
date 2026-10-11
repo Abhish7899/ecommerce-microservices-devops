@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "api-gateway.fullname" . }}-config
+  labels:
+    {{- include "api-gateway.labels" . | nindent 4 }}
+data:
+  PORT: {{ .Values.service.port | quote }}
+  NODE_ENV: {{ .Values.env.NODE_ENV | default "production" | quote }}
+  AUTH_SERVICE_URL: "http://{{ .Release.Name }}-auth-service:3001"
+  ORDER_SERVICE_URL: "http://{{ .Release.Name }}-order-service:3002"
+  INVENTORY_SERVICE_URL: "http://{{ .Release.Name }}-inventory-service:3003"
+  NOTIFICATION_SERVICE_URL: "http://{{ .Release.Name }}-notification-service:3004"

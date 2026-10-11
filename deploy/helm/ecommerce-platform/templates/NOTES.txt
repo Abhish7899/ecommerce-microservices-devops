@@ -1,0 +1,53 @@
+================================================================================
+E-COMMERCE MICROSERVICES PLATFORM DEPLOYED SUCCESSFULLY!
+Release: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+================================================================================
+
+1. GET APPLICATION STATUS:
+   To inspect all running platform workloads:
+     kubectl get pods,svc,pvc,hpa -n {{ .Release.Namespace }}
+
+2. ACCESS THE API GATEWAY:
+   The API Gateway is exposed as a ClusterIP service on port 3000.
+   To forward traffic to your local machine:
+     kubectl port-forward -n {{ .Release.Namespace }} svc/{{ .Release.Name }}-api-gateway 3000:3000
+
+   Then access the API Gateway via:
+     Health Check: http://localhost:3000/healthz
+     Gateway Info: http://localhost:3000/
+
+3. ACCESS RABBITMQ MANAGEMENT UI:
+   RabbitMQ management dashboard is exposed on port 15672.
+   To forward the management UI to your local machine:
+     kubectl port-forward -n {{ .Release.Namespace }} svc/{{ .Release.Name }}-rabbitmq 15672:15672
+
+   Open your browser at:
+     http://localhost:15672
+   Credentials:
+     Username: {{ .Values.global.rabbitmq.username }}
+     Password: [Stored in Secret {{ include "ecommerce-platform.sharedSecretName" . }}]
+
+4. ACCESS MYSQL DATABASE:
+   To connect to MySQL from your local machine:
+     kubectl port-forward -n {{ .Release.Namespace }} svc/{{ .Release.Name }}-mysql 3306:3306
+
+   Connection details:
+     Host: 127.0.0.1
+     Port: 3306
+     Database: {{ .Values.global.mysql.database }}
+     User: {{ .Values.global.mysql.user }}
+     Root Password: [Stored in Secret {{ include "ecommerce-platform.sharedSecretName" . }}]
+
+5. ACCESS REDIS CACHE:
+   To connect to Redis from your local machine:
+     kubectl port-forward -n {{ .Release.Namespace }} svc/{{ .Release.Name }}-redis 6379:6379
+
+   Test Redis:
+     redis-cli -h 127.0.0.1 -p 6379 ping
+
+6. HORIZONTAL POD AUTOSCALER (HPA):
+   Inspect autoscaling status for all microservices:
+     kubectl get hpa -n {{ .Release.Namespace }}
+
+================================================================================

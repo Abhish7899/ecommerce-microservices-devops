@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "auth-service.fullname" . }}-config
+  labels:
+    {{- include "auth-service.labels" . | nindent 4 }}
+data:
+  PORT: {{ .Values.service.port | quote }}
+  NODE_ENV: {{ .Values.env.NODE_ENV | default "production" | quote }}
+  DB_HOST: {{ .Values.global.mysql.host | default .Values.env.DB_HOST | quote }}
+  DB_PORT: {{ .Values.global.mysql.port | default .Values.env.DB_PORT | quote }}
+  DB_NAME: {{ .Values.global.mysql.database | default .Values.env.DB_NAME | quote }}
+  DB_USER: {{ .Values.global.mysql.user | default .Values.env.DB_USER | quote }}

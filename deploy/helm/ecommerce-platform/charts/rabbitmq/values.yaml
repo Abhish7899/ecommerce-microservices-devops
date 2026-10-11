@@ -1,0 +1,24 @@
+image:
+  repository: rabbitmq
+  tag: "3-management"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  ports:
+    amqp: 5672
+    management: 15672
+
+storage: 1Gi
+storageClassName: ""
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+
+env:
+  RABBITMQ_DEFAULT_USER: guest

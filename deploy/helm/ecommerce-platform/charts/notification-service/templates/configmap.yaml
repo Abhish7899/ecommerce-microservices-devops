@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "notification-service.fullname" . }}-config
+  labels:
+    {{- include "notification-service.labels" . | nindent 4 }}
+data:
+  PORT: {{ .Values.service.port | quote }}
+  NODE_ENV: {{ .Values.env.NODE_ENV | default "production" | quote }}
+  RABBITMQ_HOST: {{ .Values.global.rabbitmq.host | default .Values.env.RABBITMQ_HOST | quote }}
+  RABBITMQ_PORT: {{ .Values.global.rabbitmq.port | default .Values.env.RABBITMQ_PORT | quote }}
+  RABBITMQ_USER: {{ .Values.global.rabbitmq.username | default .Values.env.RABBITMQ_USER | quote }}

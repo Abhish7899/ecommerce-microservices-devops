@@ -1,0 +1,23 @@
+image:
+  repository: mysql
+  tag: "8.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 3306
+
+storage: 1Gi
+storageClassName: ""
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+env:
+  MYSQL_DATABASE: ecommerce
+  MYSQL_USER: ecommerce_user
