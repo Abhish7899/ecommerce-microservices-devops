@@ -200,5 +200,3 @@ deploy/helm/ecommerce-platform/
 - **Non-Root Execution**: Dockerfiles run as unprivileged `node` user for defense-in-depth container security.
 - **Resource Constraints**: CPU and Memory requests and limits are enforced on all services to prevent noisy-neighbor issues and starvation.
 
-Author
-Abhishek Dhurwade
