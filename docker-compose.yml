@@ -116,7 +116,7 @@ services:
     networks:
       - ecommerce-network
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3001/healthz || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3001/healthz > /dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -158,7 +158,7 @@ services:
     networks:
       - ecommerce-network
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3003/healthz || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3003/healthz > /dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -203,7 +203,7 @@ services:
     networks:
       - ecommerce-network
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3002/healthz || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3002/healthz > /dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -240,7 +240,7 @@ services:
     networks:
       - ecommerce-network
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3004/healthz || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3004/healthz > /dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -281,7 +281,7 @@ services:
     networks:
       - ecommerce-network
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/healthz || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3000/healthz > /dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
