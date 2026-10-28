@@ -6,6 +6,7 @@ import { logger } from './utils/logger.js';
 import { requestIdMiddleware } from './middleware/requestId.js';
 import { tracingMiddleware } from './middleware/tracing.js';
 import proxyRoutes from './routes/proxy.js';
+import { DASHBOARD_HTML } from './dashboard.js';
 
 export const app = express();
 
@@ -38,7 +39,7 @@ export const limiter = rateLimit({
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.path === '/healthz',
+  skip: (req) => req.path === '/healthz' || req.path === '/',
   message: {
     status: 429,
     error: 'Too Many Requests',
@@ -46,6 +47,12 @@ export const limiter = rateLimit({
   }
 });
 app.use(limiter);
+
+// Interactive Web UI Dashboard
+app.get('/', (req, res) => {
+  res.setHeader('Content-Type', 'text/html');
+  res.send(DASHBOARD_HTML);
+});
 
 // Health check endpoint
 app.get('/healthz', (req, res) => {
