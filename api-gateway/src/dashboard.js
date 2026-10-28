@@ -3,353 +3,467 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ApexStore &mdash; Distributed E-Commerce</title>
+  <title>Distributed E-Commerce Engine</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
-    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+    body { font-family: 'Inter', sans-serif; }
     pre, code, .font-mono { font-family: 'JetBrains Mono', monospace; }
-    .glass-card { background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
-    .glass-nav { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
-    .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
-    .custom-scroll::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
-    .custom-scroll::-webkit-scrollbar-thumb { background: rgba(71, 85, 105, 0.6); border-radius: 9999px; }
-    .badge-glow { box-shadow: 0 0 12px rgba(16, 185, 129, 0.3); }
+    .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+    .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 9999px; }
+    .custom-scroll::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.5); }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+<body class="bg-[#121820] text-slate-100 min-h-screen flex flex-col selection:bg-blue-600 selection:text-white">
 
   <!-- ========================================================================= -->
-  <!-- TOP NAVIGATION HEADER -->
+  <!-- TOP HEADER (Matching Reference Design) -->
   <!-- ========================================================================= -->
-  <header class="glass-nav sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <header class="bg-[#1a232f] border-b border-slate-800/80 sticky top-0 z-40 shadow-sm">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16">
-        <!-- Brand Logo -->
-        <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('catalog')">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-emerald-400 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-            <i class="fa-solid fa-bolt-lightning text-white text-lg"></i>
+        
+        <!-- Left: Logo & Engine Meta -->
+        <div class="flex items-center space-x-3 cursor-pointer" onclick="switchNavTab('dashboard')">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-sky-500 to-blue-600 flex items-center justify-center shadow-md shadow-sky-500/20">
+            <i class="fa-solid fa-boxes-stacked text-white text-lg"></i>
           </div>
           <div>
-            <div class="text-lg font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-              ApexStore
+            <div class="flex items-center gap-2">
+              <h1 class="text-base sm:text-lg font-bold text-white tracking-tight">Distributed E-Commerce Engine</h1>
+              <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Live on EC2
+              </span>
             </div>
-            <div class="text-[10px] text-emerald-400 font-medium tracking-wide flex items-center gap-1.5">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Microservices Live
-            </div>
+            <p class="text-[11px] text-slate-400 hidden sm:block">
+              Production Microservices &bull; Traefik/Express Gateway &bull; Redis Lock &bull; RabbitMQ
+            </p>
           </div>
         </div>
 
-        <!-- Navigation Tabs -->
-        <nav class="hidden md:flex items-center space-x-1">
-          <button onclick="switchTab('catalog')" id="tabBtn-catalog" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-white bg-slate-800 border border-slate-700 transition flex items-center gap-2">
-            <i class="fa-solid fa-shop text-indigo-400"></i> Store Catalog
-          </button>
-          <button onclick="switchTab('orders')" id="tabBtn-orders" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-900 transition flex items-center gap-2">
-            <i class="fa-solid fa-box-archive text-slate-400"></i> My Orders
-            <span id="ordersCountBadge" class="hidden px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800 text-slate-300 font-bold">0</span>
-          </button>
-          <button onclick="switchTab('account')" id="tabBtn-account" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-900 transition flex items-center gap-2">
-            <i class="fa-solid fa-user text-slate-400"></i> Account
-            <span id="accountStatusDot" class="w-2 h-2 rounded-full bg-amber-400"></span>
-          </button>
-        </nav>
-
-        <!-- Right Side: Cart Button & Quick User -->
+        <!-- Right: Utility Links & Badges -->
         <div class="flex items-center space-x-3">
-          <button onclick="handleSeedCatalog()" title="Seed Demo Products" class="hidden sm:flex text-xs text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 px-3 py-1.5 rounded-lg transition items-center gap-1.5">
-            <i class="fa-solid fa-database text-emerald-400"></i> Seed Catalog
-          </button>
-
-          <!-- Shopping Cart Button with Live Counter -->
-          <button onclick="toggleCartDrawer(true)" class="relative bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold transition shadow-lg shadow-indigo-600/30 flex items-center gap-2.5">
-            <i class="fa-solid fa-bag-shopping text-base"></i>
-            <span class="hidden sm:inline">Cart</span>
-            <span id="cartCountBadge" class="bg-white text-indigo-900 text-xs font-black px-2 py-0.5 rounded-full shadow-sm">0</span>
-          </button>
+          <a href="http://" + window.location.hostname + ":15672" target="_blank" id="topRabbitLink" class="text-xs bg-[#241e17] hover:bg-[#32281c] text-amber-400 border border-amber-500/40 px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition font-medium">
+            <i class="fa-solid fa-server text-xs"></i> RabbitMQ UI <span class="text-slate-400 text-[10px]">(Port 15672)</span>
+          </a>
+          <a href="/healthz" target="_blank" class="text-xs bg-[#152723] hover:bg-[#1a352f] text-emerald-400 border border-emerald-500/40 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition font-medium">
+            <i class="fa-solid fa-heart-pulse text-xs text-emerald-400"></i> /healthz
+          </a>
         </div>
       </div>
-    </div>
 
-    <!-- Mobile Navigation Sub-bar -->
-    <div class="md:hidden flex border-t border-slate-800/80 bg-slate-900/60 px-4 py-2 justify-around text-xs">
-      <button onclick="switchTab('catalog')" class="py-1 text-indigo-400 font-semibold flex items-center gap-1">
-        <i class="fa-solid fa-shop"></i> Store
-      </button>
-      <button onclick="switchTab('orders')" class="py-1 text-slate-400 hover:text-white flex items-center gap-1">
-        <i class="fa-solid fa-box-archive"></i> Orders
-      </button>
-      <button onclick="switchTab('account')" class="py-1 text-slate-400 hover:text-white flex items-center gap-1">
-        <i class="fa-solid fa-user"></i> Account
-      </button>
+      <!-- Sub Navigation Bar (Dashboard, Catalog, Orders, Customers, Settings) -->
+      <nav class="flex space-x-8 text-sm font-medium border-t border-slate-800/60 pt-2 pb-2.5 overflow-x-auto">
+        <button onclick="switchNavTab('dashboard')" id="navTab-dashboard" class="nav-link text-sky-400 border-b-2 border-sky-400 pb-1 font-semibold flex items-center gap-2">
+          Dashboard
+        </button>
+        <button onclick="switchNavTab('catalog')" id="navTab-catalog" class="nav-link text-slate-400 hover:text-white pb-1 transition flex items-center gap-2">
+          Catalog
+        </button>
+        <button onclick="switchNavTab('orders')" id="navTab-orders" class="nav-link text-slate-400 hover:text-white pb-1 transition flex items-center gap-2">
+          Orders
+          <span id="ordersTabCount" class="hidden text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300">0</span>
+        </button>
+        <button onclick="switchNavTab('customers')" id="navTab-customers" class="nav-link text-slate-400 hover:text-white pb-1 transition flex items-center gap-2">
+          Customers
+        </button>
+        <button onclick="switchNavTab('settings')" id="navTab-settings" class="nav-link text-slate-400 hover:text-white pb-1 transition flex items-center gap-2">
+          Settings
+        </button>
+      </nav>
     </div>
   </header>
 
   <!-- ========================================================================= -->
-  <!-- MAIN CONTENT CONTAINER -->
+  <!-- MAIN WORKSPACE CONTAINER -->
   <!-- ========================================================================= -->
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <main class="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
     <!-- --------------------------------------------------------------------- -->
-    <!-- TAB 1: PRODUCT CATALOG & STOREFRONT -->
+    <!-- VIEW 1: DASHBOARD / STOREFRONT (Matching Exact Image Structure) -->
     <!-- --------------------------------------------------------------------- -->
-    <div id="tabContent-catalog" class="space-y-6">
+    <div id="view-dashboard" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
       
-      <!-- Storefront Hero Banner -->
-      <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-950 via-slate-900 to-slate-950 border border-indigo-500/20 p-8 shadow-2xl">
-        <div class="absolute -right-10 -bottom-10 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div class="max-w-2xl relative z-10 space-y-3">
-          <span class="px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wider">
-            Redis Concurrency Engine &bull; Zero Overselling
-          </span>
-          <h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
-            High-Performance Hardware & Accessories
-          </h2>
-          <p class="text-sm text-slate-300 leading-relaxed">
-            All purchases are protected by Redis distributed locking (<code class="text-emerald-400">SETNX</code>) and asynchronous order processing powered by RabbitMQ message queues.
-          </p>
+      <!-- LEFT COLUMN: Search & Product Catalog Cards (approx 9 cols) -->
+      <div class="lg:col-span-9 space-y-6">
+        
+        <!-- Search & Category Bar -->
+        <div class="space-y-3">
+          <div class="relative w-full">
+            <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-400 text-sm"></i>
+            <input id="productSearchInput" oninput="applyCatalogFilters()" type="text" placeholder="Search products..." class="w-full bg-white text-slate-900 border border-slate-300 rounded-xl pl-11 pr-4 py-2.5 text-sm placeholder-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+          </div>
+
+          <!-- Category Tags -->
+          <div class="flex items-center gap-2 overflow-x-auto pb-1" id="categoryChips">
+            <button onclick="filterByCategory('all')" class="cat-chip active px-3.5 py-1 rounded-lg text-xs font-semibold bg-blue-600 text-white transition whitespace-nowrap shadow-sm">
+              All Items
+            </button>
+            <button onclick="filterByCategory('Electronics')" class="cat-chip px-3.5 py-1 rounded-lg text-xs font-medium bg-[#1e293b] text-slate-300 hover:bg-slate-800 transition whitespace-nowrap border border-slate-700/60">
+              Modern Electronics
+            </button>
+            <button onclick="filterByCategory('Fashion')" class="cat-chip px-3.5 py-1 rounded-lg text-xs font-medium bg-[#1e293b] text-slate-300 hover:bg-slate-800 transition whitespace-nowrap border border-slate-700/60">
+              Fashion & Apparel
+            </button>
+            <button onclick="filterByCategory('Accessories')" class="cat-chip px-3.5 py-1 rounded-lg text-xs font-medium bg-[#1e293b] text-slate-300 hover:bg-slate-800 transition whitespace-nowrap border border-slate-700/60">
+              Accessories
+            </button>
+            <button onclick="filterByCategory('Keyboards')" class="cat-chip px-3.5 py-1 rounded-lg text-xs font-medium bg-[#1e293b] text-slate-300 hover:bg-slate-800 transition whitespace-nowrap border border-slate-700/60">
+              Keyboards & Mice
+            </button>
+          </div>
+        </div>
+
+        <!-- Product Cards Grid (Clean White Cards matching image) -->
+        <div id="productGridContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
+          <!-- Dynamically Populated by renderProducts() -->
+          <div class="col-span-full py-20 text-center text-slate-400">
+            <i class="fa-solid fa-spinner fa-spin text-2xl text-blue-500 mb-3"></i>
+            <p class="text-sm">Connecting to Inventory Service...</p>
+          </div>
         </div>
       </div>
 
-      <!-- Search, Categories & Filter Bar -->
-      <div class="glass-card p-4 rounded-2xl flex flex-col md:flex-row gap-4 justify-between items-center">
-        <!-- Search Input -->
-        <div class="relative w-full md:w-80">
-          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
-          <input id="searchInput" oninput="filterCatalog()" type="text" placeholder="Search by product name or SKU..." class="w-full bg-slate-900 border border-slate-700/80 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition">
+      <!-- RIGHT COLUMN: Sidebar (Your Cart, Quick Actions, Live Activity) -->
+      <div class="lg:col-span-3 space-y-6">
+
+        <!-- CARD 1: "Your Cart" (Clean White Card) -->
+        <div class="bg-white text-slate-900 rounded-2xl p-5 shadow-lg border border-slate-200">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+              <h3 class="text-base font-bold text-slate-900">Your Cart</h3>
+              <p class="text-[11px] text-slate-400">My Orders History</p>
+            </div>
+            <span class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950 text-white text-xs font-bold shadow-sm">
+              <i class="fa-solid fa-bag-shopping text-[10px] text-blue-400"></i>
+              <span id="cartHeaderBadge">0 Items</span>
+            </span>
+          </div>
+
+          <!-- Cart Item List -->
+          <div id="cartItemsList" class="divide-y divide-slate-100 py-3 space-y-3 max-h-72 overflow-y-auto custom-scroll">
+            <div class="py-8 text-center text-slate-400 space-y-2">
+              <i class="fa-solid fa-cart-shopping text-2xl text-slate-300"></i>
+              <p class="text-xs">Your cart is currently empty</p>
+              <p class="text-[10px] text-slate-400">Click "Add to Cart" on any product</p>
+            </div>
+          </div>
+
+          <!-- Total Calculation -->
+          <div class="pt-3 border-t border-slate-100 space-y-2 text-xs">
+            <div class="flex justify-between text-slate-500">
+              <span>Subtotal</span>
+              <span id="cartSubtotalText" class="font-bold text-slate-800 font-mono">$0.00</span>
+            </div>
+            <div class="flex justify-between text-slate-500">
+              <span>Concurrency Lock</span>
+              <span class="text-emerald-600 font-semibold font-mono">Redis SETNX</span>
+            </div>
+            <div class="flex justify-between text-sm font-bold text-slate-900 pt-1 border-t border-slate-100">
+              <span>Total</span>
+              <span id="cartTotalText" class="text-base font-mono text-slate-950">$0.00</span>
+            </div>
+          </div>
+
+          <!-- Checkout Now Button -->
+          <button id="cartCheckoutBtn" onclick="openCheckoutModal()" class="w-full mt-4 bg-slate-950 hover:bg-slate-800 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow-md flex items-center justify-center gap-2 disabled:bg-slate-300 disabled:cursor-not-allowed">
+            <i class="fa-solid fa-bolt text-xs text-blue-400"></i> Checkout Now
+          </button>
         </div>
 
-        <!-- Category Filters -->
-        <div class="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0" id="categoryFilterBar">
-          <button onclick="setCategoryFilter('all')" class="cat-pill active px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white transition whitespace-nowrap">
-            All Products
-          </button>
-          <button onclick="setCategoryFilter('Monitors')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:bg-slate-800 transition whitespace-nowrap">
-            Monitors
-          </button>
-          <button onclick="setCategoryFilter('Keyboards')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:bg-slate-800 transition whitespace-nowrap">
-            Keyboards
-          </button>
-          <button onclick="setCategoryFilter('Audio')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:bg-slate-800 transition whitespace-nowrap">
-            Audio
-          </button>
-          <button onclick="setCategoryFilter('Accessories')" class="cat-pill px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:bg-slate-800 transition whitespace-nowrap">
-            Accessories
-          </button>
+        <!-- CARD 2: "Quick Actions" (Dark Card with 3 Blue Buttons) -->
+        <div class="bg-[#182230] border border-slate-800 rounded-2xl p-5 shadow-md space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">
+            Quick Actions
+          </h3>
+          <div class="space-y-2">
+            <button onclick="openAddProductModal()" class="w-full bg-[#1e60d5] hover:bg-blue-600 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow-md flex items-center justify-center gap-2">
+              <i class="fa-solid fa-plus text-xs"></i> Add New Product
+            </button>
+            <button onclick="switchNavTab('orders')" class="w-full bg-[#1e60d5] hover:bg-blue-600 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow-md flex items-center justify-center gap-2">
+              <i class="fa-solid fa-receipt text-xs"></i> View All Orders
+            </button>
+            <button onclick="handleSeedCatalog()" class="w-full bg-[#1e60d5] hover:bg-blue-600 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow-md flex items-center justify-center gap-2">
+              <i class="fa-solid fa-database text-xs"></i> Seed Product Catalog
+            </button>
+          </div>
         </div>
 
-        <!-- Live Refresh & View Controls -->
-        <div class="flex items-center space-x-2 w-full md:w-auto justify-end">
-          <button onclick="fetchInventory()" class="text-xs text-slate-300 hover:text-white bg-slate-900 border border-slate-800 px-3 py-2 rounded-xl transition flex items-center gap-1.5">
-            <i class="fa-solid fa-rotate text-indigo-400"></i> Refresh
-          </button>
-        </div>
-      </div>
+        <!-- CARD 3: "Live Activity / Events" (Dark Card with Green Glow Bullets) -->
+        <div class="bg-[#182230] border border-slate-800 rounded-2xl p-5 shadow-md space-y-3">
+          <div class="flex justify-between items-center">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Live Activity Stream
+            </h3>
+            <span class="text-[10px] text-slate-500 font-mono">RabbitMQ</span>
+          </div>
 
-      <!-- Products Grid -->
-      <div id="productsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        <!-- Rendered Dynamically -->
-        <div class="col-span-full py-16 text-center text-slate-500">
-          <i class="fa-solid fa-spinner fa-spin text-2xl mb-3 text-indigo-400"></i>
-          <p class="text-sm">Connecting to Inventory Service on port 3003...</p>
+          <div id="liveActivityFeed" class="space-y-2.5 text-xs">
+            <div class="flex items-start space-x-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0"></span>
+              <div>
+                <p class="font-semibold text-slate-200">Product Stock Updated</p>
+                <p class="text-[10px] text-slate-400">Inventory cached with 60s TTL</p>
+              </div>
+            </div>
+            <div class="flex items-start space-x-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0"></span>
+              <div>
+                <p class="font-semibold text-slate-200">Order Service Ready</p>
+                <p class="text-[10px] text-slate-400">MySQL transaction pool active</p>
+              </div>
+            </div>
+            <div class="flex items-start space-x-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0"></span>
+              <div>
+                <p class="font-semibold text-slate-200">Notification Worker Active</p>
+                <p class="text-[10px] text-slate-400">Listening to 'ecommerce.events'</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- --------------------------------------------------------------------- -->
-    <!-- TAB 2: MY ORDERS HISTORY -->
+    <!-- VIEW 2: FULL CATALOG TABLE -->
     <!-- --------------------------------------------------------------------- -->
-    <div id="tabContent-orders" class="hidden space-y-6">
-      <div class="flex justify-between items-center">
+    <div id="view-catalog" class="hidden space-y-4">
+      <div class="flex justify-between items-center pb-2 border-b border-slate-800">
         <div>
-          <h2 class="text-2xl font-bold text-white tracking-tight">Order History</h2>
-          <p class="text-xs text-slate-400">Live order records retrieved directly from Order Service & MySQL database</p>
+          <h2 class="text-xl font-bold text-white">Inventory Catalog Management</h2>
+          <p class="text-xs text-slate-400">Real-time stock quantities coordinated by MySQL 8.0 and Redis</p>
         </div>
-        <button onclick="fetchOrders()" class="text-xs text-indigo-400 hover:text-indigo-300 bg-slate-900 border border-slate-800 px-3 py-2 rounded-xl transition flex items-center gap-1.5">
+        <div class="flex gap-2">
+          <button onclick="handleSeedCatalog()" class="text-xs bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg border border-slate-700 transition">
+            <i class="fa-solid fa-database text-emerald-400"></i> Seed Catalog
+          </button>
+          <button onclick="fetchInventory()" class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg transition">
+            <i class="fa-solid fa-rotate"></i> Refresh
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-[#182230] rounded-2xl border border-slate-800 overflow-hidden shadow-lg">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-800">
+            <tr>
+              <th class="p-3.5">ID</th>
+              <th class="p-3.5">Product Name</th>
+              <th class="p-3.5">SKU</th>
+              <th class="p-3.5">Price</th>
+              <th class="p-3.5">Stock Level</th>
+              <th class="p-3.5 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody id="catalogTableBody" class="divide-y divide-slate-800 text-slate-300">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- --------------------------------------------------------------------- -->
+    <!-- VIEW 3: ORDERS MANAGEMENT & DETAIL VIEW -->
+    <!-- --------------------------------------------------------------------- -->
+    <div id="view-orders" class="hidden space-y-4">
+      <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+        <div>
+          <h2 class="text-xl font-bold text-white">Placed Customer Orders</h2>
+          <p class="text-xs text-slate-400">Orders written to MySQL and published to RabbitMQ topic exchange</p>
+        </div>
+        <button onclick="fetchOrders()" class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">
           <i class="fa-solid fa-rotate"></i> Refresh Orders
         </button>
       </div>
 
-      <!-- Orders List Container -->
-      <div id="ordersContainer" class="space-y-4">
-        <div class="glass-card p-12 text-center rounded-2xl text-slate-400 space-y-3">
-          <i class="fa-solid fa-receipt text-3xl text-slate-600"></i>
-          <p class="text-sm">No orders found for this account.</p>
-          <button onclick="switchTab('catalog')" class="text-xs text-indigo-400 hover:underline">Explore the Catalog</button>
+      <div id="ordersListContainer" class="space-y-3">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+
+    <!-- --------------------------------------------------------------------- -->
+    <!-- VIEW 4: CUSTOMERS / AUTH PROFILES -->
+    <!-- --------------------------------------------------------------------- -->
+    <div id="view-customers" class="hidden max-w-2xl mx-auto space-y-6">
+      <div class="bg-[#182230] border border-slate-800 rounded-3xl p-6 shadow-xl space-y-5">
+        <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+          <div class="flex items-center space-x-3">
+            <div class="w-12 h-12 rounded-2xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center text-lg font-bold">
+              <i class="fa-solid fa-user-shield"></i>
+            </div>
+            <div>
+              <h3 id="customerNameHeader" class="text-base font-bold text-white">Active Customer Profile</h3>
+              <p id="customerEmailHeader" class="text-xs text-slate-400">customer@ecommerce.local</p>
+            </div>
+          </div>
+          <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold">
+            JWT Authenticated
+          </span>
+        </div>
+
+        <!-- Auth Switching Form -->
+        <div class="space-y-3">
+          <h4 class="text-xs font-bold uppercase text-slate-400">Switch / Register User Account</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input id="switchEmailInput" type="email" value="customer@ecommerce.local" placeholder="Email" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+            <input id="switchPassInput" type="password" value="Password123!" placeholder="Password" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+          </div>
+          <div class="flex gap-2 pt-1">
+            <button onclick="handleUserLogin()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 rounded-xl text-xs transition">
+              Sign In (Generate Token)
+            </button>
+            <button onclick="handleUserRegister()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 rounded-xl text-xs transition border border-slate-700">
+              Register New User
+            </button>
+          </div>
+        </div>
+
+        <!-- Token inspect -->
+        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
+          <div class="flex justify-between items-center text-[11px] text-slate-400">
+            <span>Current Bearer Token:</span>
+            <button onclick="copyTokenToClipboard()" class="text-blue-400 hover:underline">Copy</button>
+          </div>
+          <p id="jwtTokenString" class="text-[10px] font-mono text-emerald-400 break-all select-all"></p>
         </div>
       </div>
     </div>
 
     <!-- --------------------------------------------------------------------- -->
-    <!-- TAB 3: ACCOUNT & AUTHENTICATION -->
+    <!-- VIEW 5: SETTINGS / SYSTEM HEALTH -->
     <!-- --------------------------------------------------------------------- -->
-    <div id="tabContent-account" class="hidden max-w-2xl mx-auto space-y-6">
-      <div class="glass-card p-8 rounded-3xl border border-slate-800 shadow-2xl space-y-6">
-        
-        <!-- Account Status Header -->
-        <div class="flex items-center justify-between pb-6 border-b border-slate-800">
-          <div class="flex items-center space-x-4">
-            <div class="w-14 h-14 rounded-2xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-xl font-bold">
-              <i class="fa-solid fa-user-shield"></i>
-            </div>
-            <div>
-              <h3 id="profileNameDisplay" class="text-lg font-bold text-white">Guest User</h3>
-              <p id="profileEmailDisplay" class="text-xs text-slate-400">Not authenticated</p>
-            </div>
+    <div id="view-settings" class="hidden max-w-3xl mx-auto space-y-6">
+      <div class="bg-[#182230] border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+        <h3 class="text-base font-bold text-white pb-3 border-b border-slate-800">
+          Platform Configuration & Microservices Mesh
+        </h3>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800">
+            <div class="text-slate-400 font-mono">Gateway</div>
+            <div class="text-white font-bold mt-1">Port 3000</div>
+            <div class="text-emerald-400 text-[10px]">Healthy</div>
           </div>
-          <span id="profileBadge" class="text-xs font-semibold px-3 py-1 rounded-full bg-slate-800 text-slate-400">
-            Guest
-          </span>
-        </div>
-
-        <!-- Authentication Form -->
-        <div class="space-y-4">
-          <h4 class="text-sm font-semibold text-white uppercase tracking-wider text-slate-300">
-            Sign In or Register
-          </h4>
-          <div class="space-y-3">
-            <div>
-              <label class="block text-xs font-medium text-slate-400 mb-1">Full Name (for new registration)</label>
-              <input id="accNameInput" type="text" value="DevOps Customer" class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-slate-400 mb-1">Email Address</label>
-              <input id="accEmailInput" type="email" value="customer@ecommerce.local" class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-slate-400 mb-1">Password</label>
-              <input id="accPassInput" type="password" value="Password123!" class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
-            </div>
+          <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800">
+            <div class="text-slate-400 font-mono">Auth</div>
+            <div class="text-white font-bold mt-1">Port 3001</div>
+            <div class="text-emerald-400 text-[10px]">Healthy</div>
           </div>
-
-          <div class="grid grid-cols-2 gap-3 pt-2">
-            <button onclick="handleAccountLogin()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-xl text-sm transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2">
-              <i class="fa-solid fa-right-to-bracket"></i> Sign In
-            </button>
-            <button onclick="handleAccountRegister()" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2.5 rounded-xl text-sm transition border border-slate-700 flex items-center justify-center gap-2">
-              <i class="fa-solid fa-user-plus text-indigo-400"></i> Register New
-            </button>
+          <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800">
+            <div class="text-slate-400 font-mono">Orders</div>
+            <div class="text-white font-bold mt-1">Port 3002</div>
+            <div class="text-emerald-400 text-[10px]">Healthy</div>
+          </div>
+          <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800">
+            <div class="text-slate-400 font-mono">Inventory</div>
+            <div class="text-white font-bold mt-1">Port 3003</div>
+            <div class="text-emerald-400 text-[10px]">Healthy</div>
           </div>
         </div>
 
-        <!-- Active JWT Token Inspect Box -->
-        <div id="jwtTokenBox" class="hidden bg-slate-950/80 p-4 rounded-2xl border border-indigo-500/20 space-y-2">
-          <div class="flex justify-between items-center text-xs">
-            <span class="text-slate-400 font-medium">Active JWT Token (HS256)</span>
-            <button onclick="copyAuthToken()" class="text-indigo-400 hover:text-indigo-300 font-semibold text-xs flex items-center gap-1">
-              <i class="fa-regular fa-copy"></i> Copy Token
-            </button>
+        <div class="pt-4 flex justify-between items-center border-t border-slate-800 text-xs">
+          <span class="text-slate-400">Direct Infrastructure Links</span>
+          <div class="flex gap-2">
+            <a href="http://" + window.location.hostname + ":15672" target="_blank" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-lg border border-slate-700">
+              RabbitMQ Console
+            </a>
+            <a href="/healthz" target="_blank" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-lg border border-slate-700">
+              Raw /healthz
+            </a>
           </div>
-          <p id="jwtTokenDisplay" class="font-mono text-xs text-emerald-400 break-all select-all line-clamp-3"></p>
         </div>
       </div>
     </div>
   </main>
 
   <!-- ========================================================================= -->
-  <!-- SHOPPING CART SLIDE-OVER DRAWER -->
+  <!-- CHECKOUT MODAL -->
   <!-- ========================================================================= -->
-  <div id="cartDrawerBackdrop" onclick="toggleCartDrawer(false)" class="hidden fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 transition-opacity"></div>
-  
-  <div id="cartDrawer" class="fixed right-0 top-0 bottom-0 w-full max-w-md bg-slate-900 border-l border-slate-800 shadow-2xl z-50 transform translate-x-full transition-transform duration-300 flex flex-col">
-    <!-- Cart Header -->
-    <div class="p-6 border-b border-slate-800 flex justify-between items-center">
-      <div class="flex items-center space-x-2">
-        <i class="fa-solid fa-bag-shopping text-indigo-400 text-lg"></i>
-        <h3 class="text-lg font-bold text-white">Your Shopping Cart</h3>
-      </div>
-      <button onclick="toggleCartDrawer(false)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-    </div>
-
-    <!-- Cart Items List -->
-    <div id="cartItemsContainer" class="flex-1 overflow-y-auto p-6 space-y-4 custom-scroll">
-      <!-- Items dynamically added -->
-      <div class="text-center py-16 text-slate-500 space-y-2">
-        <i class="fa-solid fa-cart-arrow-down text-3xl text-slate-600"></i>
-        <p class="text-sm">Your shopping cart is empty.</p>
-        <button onclick="toggleCartDrawer(false)" class="text-xs text-indigo-400 hover:underline">Start Shopping</button>
-      </div>
-    </div>
-
-    <!-- Cart Summary & Checkout -->
-    <div class="p-6 border-t border-slate-800 bg-slate-950/60 space-y-4">
-      <div class="space-y-1.5 text-xs">
-        <div class="flex justify-between text-slate-400">
-          <span>Subtotal</span>
-          <span id="cartSubtotal" class="font-mono text-white">$0.00</span>
-        </div>
-        <div class="flex justify-between text-slate-400">
-          <span>Shipping (Express)</span>
-          <span class="text-emerald-400 font-semibold">FREE</span>
-        </div>
-        <div class="flex justify-between text-slate-400">
-          <span>Tax</span>
-          <span class="font-mono text-white">$0.00</span>
-        </div>
-        <div class="flex justify-between text-base font-bold text-white pt-2 border-t border-slate-800">
-          <span>Total Amount</span>
-          <span id="cartTotal" class="font-mono text-emerald-400">$0.00</span>
-        </div>
-      </div>
-
-      <button id="checkoutBtn" onclick="handleCheckout()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-3 rounded-xl text-sm transition shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2">
-        <i class="fa-solid fa-lock text-xs"></i> Place Order with Redis Lock
-      </button>
-    </div>
-  </div>
-
-  <!-- ========================================================================= -->
-  <!-- ORDER DETAILS POPUP MODAL -->
-  <!-- ========================================================================= -->
-  <div id="orderDetailModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-    <div class="glass-card max-w-lg w-full rounded-3xl p-6 border border-slate-700 shadow-2xl space-y-6">
-      <div class="flex justify-between items-center pb-4 border-b border-slate-800">
+  <div id="checkoutModal" class="hidden fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white text-slate-900 max-w-lg w-full rounded-3xl p-6 shadow-2xl border border-slate-200 space-y-5">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-100">
         <div>
-          <span class="text-xs font-mono text-indigo-400" id="modalOrderId">Order #1</span>
-          <h3 class="text-lg font-bold text-white">Order Receipt & Details</h3>
+          <h3 class="text-lg font-bold text-slate-900">Confirm Order Checkout</h3>
+          <p class="text-xs text-slate-500">Atomic stock reservation via Redis distributed lock</p>
         </div>
-        <button onclick="closeOrderModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition">
+        <button onclick="closeCheckoutModal()" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
-      <!-- Status Timeline -->
-      <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-800 space-y-2">
-        <div class="flex items-center justify-between text-xs">
-          <span class="text-slate-400">Status</span>
-          <span id="modalOrderStatus" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">Pending</span>
+      <!-- Itemized Cart Review -->
+      <div id="checkoutModalItems" class="space-y-2 max-h-56 overflow-y-auto custom-scroll pr-1 divide-y divide-slate-100">
+        <!-- Dynamically injected -->
+      </div>
+
+      <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-1.5 text-xs">
+        <div class="flex justify-between text-slate-600">
+          <span>Total Order Value:</span>
+          <span id="checkoutModalTotal" class="font-bold text-base font-mono text-slate-900">$0.00</span>
         </div>
-        <div class="flex items-center justify-between text-xs">
-          <span class="text-slate-400">Order Placed At</span>
-          <span id="modalOrderDate" class="text-slate-200 font-mono">--</span>
-        </div>
-        <div class="flex items-center justify-between text-xs">
-          <span class="text-slate-400">Event Dispatched</span>
-          <span class="text-emerald-400 font-mono flex items-center gap-1">
-            <i class="fa-solid fa-check text-[10px]"></i> RabbitMQ 'order.created'
-          </span>
+        <div class="flex justify-between text-slate-500 text-[11px]">
+          <span>Event Message Target:</span>
+          <span class="font-mono text-blue-600">amqp://ecommerce.events/order.created</span>
         </div>
       </div>
 
-      <!-- Itemized Table -->
+      <div class="flex gap-3 pt-2">
+        <button onclick="closeCheckoutModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-xl text-xs transition">
+          Continue Shopping
+        </button>
+        <button id="confirmOrderBtn" onclick="executeCheckoutOrder()" class="flex-1 bg-slate-950 hover:bg-slate-800 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md flex items-center justify-center gap-2">
+          <i class="fa-solid fa-lock text-xs text-emerald-400"></i> Place Order
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- ORDER DETAILS POPUP MODAL (For My Orders history) -->
+  <!-- ========================================================================= -->
+  <div id="orderDetailPopup" class="hidden fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white text-slate-900 max-w-lg w-full rounded-3xl p-6 shadow-2xl border border-slate-200 space-y-5">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+        <div>
+          <span id="popupOrderId" class="text-xs font-mono font-bold text-blue-600">Order #1</span>
+          <h3 class="text-lg font-bold text-slate-900">Receipt & Item Breakdown</h3>
+        </div>
+        <button onclick="closeOrderDetailPopup()" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-1.5 text-xs">
+        <div class="flex justify-between text-slate-600">
+          <span>Status:</span>
+          <span id="popupOrderStatus" class="px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800 text-[10px]">PENDING</span>
+        </div>
+        <div class="flex justify-between text-slate-600">
+          <span>Date Placed:</span>
+          <span id="popupOrderDate" class="font-mono text-slate-800">--</span>
+        </div>
+        <div class="flex justify-between text-slate-600">
+          <span>Event Queue:</span>
+          <span class="text-emerald-600 font-mono font-semibold">notification.order.created (Acked)</span>
+        </div>
+      </div>
+
       <div class="space-y-2">
-        <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Purchased Items</h4>
-        <div id="modalOrderItems" class="space-y-2 max-h-48 overflow-y-auto custom-scroll pr-1">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500">Purchased Items</h4>
+        <div id="popupOrderItemsList" class="space-y-2 max-h-48 overflow-y-auto custom-scroll pr-1 divide-y divide-slate-100">
           <!-- Dynamically populated -->
         </div>
       </div>
 
-      <!-- Order Total -->
-      <div class="flex justify-between items-center pt-4 border-t border-slate-800">
-        <span class="text-sm font-semibold text-slate-300">Total Charged</span>
-        <span id="modalOrderTotal" class="text-xl font-bold font-mono text-emerald-400">$0.00</span>
+      <div class="flex justify-between items-center pt-3 border-t border-slate-100">
+        <span class="text-sm font-semibold text-slate-700">Total Billed:</span>
+        <span id="popupOrderTotal" class="text-xl font-bold font-mono text-slate-950">$0.00</span>
       </div>
 
-      <button onclick="closeOrderModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2.5 rounded-xl text-sm transition">
-        Close Receipt
+      <button onclick="closeOrderDetailPopup()" class="w-full bg-slate-950 hover:bg-slate-800 text-white font-semibold py-2.5 rounded-xl text-xs transition">
+        Close Window
       </button>
     </div>
   </div>
@@ -357,101 +471,87 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   <!-- ========================================================================= -->
   <!-- COLLAPSIBLE TERMINAL / DEVELOPER DEBUG DRAWER (AT BOTTOM) -->
   <!-- ========================================================================= -->
-  <div id="debugDrawer" class="sticky bottom-0 z-30 transition-all duration-300 bg-slate-900/95 border-t border-slate-800 backdrop-blur-xl shadow-2xl">
-    <!-- Header Bar (Always Visible as a Clean Strip) -->
-    <div onclick="toggleDebugDrawer()" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex justify-between items-center cursor-pointer select-none">
+  <div id="bottomDebugDrawer" class="sticky bottom-0 z-30 transition-all duration-300 bg-[#151d27] border-t border-slate-800 shadow-2xl">
+    <!-- Header Bar (Discrete, Clean Strip) -->
+    <div onclick="toggleBottomDrawer()" class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex justify-between items-center cursor-pointer select-none">
       <div class="flex items-center space-x-3 text-xs">
-        <span class="px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-400 font-mono font-bold flex items-center gap-1.5">
-          <i class="fa-solid fa-terminal text-[10px]"></i> DevOps Trace Console
+        <span class="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-400 font-mono font-bold flex items-center gap-1.5">
+          <i class="fa-solid fa-terminal text-[10px]"></i> DevOps Trace Drawer
         </span>
-        <span class="hidden sm:inline text-slate-400">&bull; 8 Microservices Healthy</span>
-        <span id="drawerLogCount" class="text-emerald-400 font-mono text-[11px]">0 events logged</span>
+        <span class="text-slate-400 hidden sm:inline">&bull; 8 Microservices Healthy</span>
+        <span id="drawerEventCounter" class="text-emerald-400 font-mono text-[11px]">0 events logged</span>
       </div>
-      <div class="flex items-center space-x-4">
-        <a href="http://" + window.location.hostname + ":15672" target="_blank" onclick="event.stopPropagation()" class="hidden md:flex text-[11px] text-amber-400 hover:underline items-center gap-1">
-          <i class="fa-solid fa-server"></i> RabbitMQ Portal
-        </a>
-        <a href="/healthz" target="_blank" onclick="event.stopPropagation()" class="hidden md:flex text-[11px] text-slate-400 hover:text-white items-center gap-1">
-          <i class="fa-solid fa-heart-pulse text-emerald-400"></i> /healthz
-        </a>
-        <span id="debugChevron" class="text-xs text-slate-400 flex items-center gap-1">
-          <span class="text-[11px] hidden sm:inline" id="debugStateText">Show Logs</span>
+
+      <div class="flex items-center space-x-4 text-xs">
+        <span id="drawerChevron" class="text-slate-400 flex items-center gap-1">
+          <span class="text-[11px] hidden sm:inline" id="drawerStateLabel">Show Logs</span>
           <i class="fa-solid fa-chevron-up transition-transform duration-200"></i>
         </span>
       </div>
     </div>
 
-    <!-- Expandable Drawer Body (Hidden by default) -->
-    <div id="debugDrawerContent" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4">
+    <!-- Drawer Terminal Body (Collapsed by Default) -->
+    <div id="bottomDrawerBody" class="hidden max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 pb-4">
       <div class="flex justify-between items-center mb-2 text-xs">
-        <span class="text-slate-400 font-mono">W3C Traceparent & Request Header Stream:</span>
-        <button onclick="clearConsoleLog()" class="text-slate-500 hover:text-slate-300 text-[11px]">Clear Console</button>
+        <span class="text-slate-400 font-mono text-[11px]">W3C traceparent & Distributed OpenTelemetry Stream:</span>
+        <button onclick="clearDebugTerminal()" class="text-slate-500 hover:text-slate-300 text-[11px]">Clear Console</button>
       </div>
-      <div id="consoleTerminal" class="h-48 overflow-y-auto bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] font-mono space-y-1 custom-scroll text-slate-300">
-        <div class="text-slate-500">[init] API Gateway reverse proxy active on port 3000</div>
-        <div class="text-slate-500">[init] OpenTelemetry W3C traceparent header propagation enabled</div>
+      <div id="terminalStream" class="h-44 overflow-y-auto bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] font-mono space-y-1 custom-scroll text-slate-300">
+        <div class="text-slate-500">[system] Gateway reverse proxy ready on port 3000</div>
+        <div class="text-slate-500">[system] W3C traceparent context propagation active</div>
       </div>
     </div>
   </div>
 
-  <!-- Toast Notification Container -->
-  <div id="toast" class="fixed bottom-14 right-6 z-50 transform translate-y-24 opacity-0 transition-all duration-300 bg-slate-900 border border-indigo-500/40 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 text-sm">
-    <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-base"></i>
-    <span id="toastMsg">Operation successful</span>
+  <!-- Toast Notification -->
+  <div id="toastNotification" class="fixed bottom-14 right-6 z-50 transform translate-y-24 opacity-0 transition-all duration-300 bg-slate-900 border border-blue-500/40 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 text-sm">
+    <i id="toastNotificationIcon" class="fa-solid fa-circle-check text-emerald-400 text-base"></i>
+    <span id="toastNotificationText">Success</span>
   </div>
 
   <!-- ========================================================================= -->
-  <!-- JAVASCRIPT APPLICATION CONTROLLER -->
+  <!-- JAVASCRIPT APPLICATION CORE -->
   <!-- ========================================================================= -->
   <script>
-    // Global Application State
-    let authToken = localStorage.getItem('apex_jwt_token') || '';
-    let currentAuthUser = JSON.parse(localStorage.getItem('apex_user') || 'null');
-    let allProducts = [];
-    let cart = JSON.parse(localStorage.getItem('apex_cart') || '[]');
-    let allOrders = [];
-    let currentCategory = 'all';
-    let isDebugOpen = false;
+    // State management
+    let jwtToken = localStorage.getItem('app_jwt_token') || '';
+    let authenticatedUser = JSON.parse(localStorage.getItem('app_user') || 'null');
+    let catalogItems = [];
+    let shoppingCart = JSON.parse(localStorage.getItem('app_cart') || '[]');
+    let userOrders = [];
+    let activeCategory = 'all';
+    let isDrawerOpen = false;
 
-    // Initialize application
+    // High quality product images mapping
+    const productImages = {
+      1: 'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=500&auto=format&fit=crop&q=80', // Monitor
+      2: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=500&auto=format&fit=crop&q=80', // Keyboard
+      3: 'https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=500&auto=format&fit=crop&q=80', // Mouse
+      4: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&auto=format&fit=crop&q=80', // Headphones
+      5: 'https://images.unsplash.com/photo-1622434641406-a158123450f9?w=500&auto=format&fit=crop&q=80', // Dock
+      6: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&auto=format&fit=crop&q=80', // Smartphone
+      7: 'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=500&auto=format&fit=crop&q=80', // Dress
+      8: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=500&auto=format&fit=crop&q=80'  // Jacket
+    };
+
     window.addEventListener('DOMContentLoaded', () => {
-      // Auto-login default demo user if no token exists to ensure instant shopping experience
-      if (!authToken) {
-        autoLoginDemoUser();
+      document.getElementById('topRabbitLink').href = 'http://' + window.location.hostname + ':15672';
+      
+      if (!jwtToken) {
+        initAutoLogin();
       } else {
-        updateAuthHeader();
+        updateProfileDisplay();
         fetchInventory();
         fetchOrders();
       }
-      renderCart();
+      renderCartUI();
     });
-
-    // -------------------------------------------------------------------------
-    // Toast Notification Utility
-    // -------------------------------------------------------------------------
-    function showToast(msg, type = 'success') {
-      const toast = document.getElementById('toast');
-      const toastMsg = document.getElementById('toastMsg');
-      const toastIcon = document.getElementById('toastIcon');
-
-      toastMsg.textContent = msg;
-      if (type === 'error') {
-        toastIcon.className = 'fa-solid fa-circle-xmark text-rose-400 text-base';
-      } else {
-        toastIcon.className = 'fa-solid fa-circle-check text-emerald-400 text-base';
-      }
-
-      toast.classList.remove('translate-y-24', 'opacity-0');
-      setTimeout(() => {
-        toast.classList.add('translate-y-24', 'opacity-0');
-      }, 3200);
-    }
 
     // -------------------------------------------------------------------------
     // Logging / Terminal Drawer
     // -------------------------------------------------------------------------
-    function logTrace(msg, type = 'info') {
-      const term = document.getElementById('consoleTerminal');
+    function pushTrace(msg, type = 'info') {
+      const term = document.getElementById('terminalStream');
       const time = new Date().toLocaleTimeString();
       let color = 'text-emerald-400';
       if (type === 'error') color = 'text-rose-400';
@@ -464,59 +564,78 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       term.appendChild(line);
       term.scrollTop = term.scrollHeight;
 
-      // Update count badge
       const count = term.children.length;
-      document.getElementById('drawerLogCount').textContent = \`\${count} events logged\`;
+      document.getElementById('drawerEventCounter').textContent = \`\${count} events logged\`;
     }
 
-    function clearConsoleLog() {
-      document.getElementById('consoleTerminal').innerHTML = '';
-      document.getElementById('drawerLogCount').textContent = '0 events logged';
+    function clearDebugTerminal() {
+      document.getElementById('terminalStream').innerHTML = '';
+      document.getElementById('drawerEventCounter').textContent = '0 events logged';
     }
 
-    function toggleDebugDrawer() {
-      isDebugOpen = !isDebugOpen;
-      const content = document.getElementById('debugDrawerContent');
-      const chevron = document.querySelector('#debugChevron i');
-      const text = document.getElementById('debugStateText');
+    function toggleBottomDrawer() {
+      isDrawerOpen = !isDrawerOpen;
+      const body = document.getElementById('bottomDrawerBody');
+      const chevron = document.querySelector('#drawerChevron i');
+      const label = document.getElementById('drawerStateLabel');
 
-      if (isDebugOpen) {
-        content.classList.remove('hidden');
+      if (isDrawerOpen) {
+        body.classList.remove('hidden');
         chevron.classList.add('rotate-180');
-        text.textContent = 'Hide Logs';
+        label.textContent = 'Hide Logs';
       } else {
-        content.classList.add('hidden');
+        body.classList.add('hidden');
         chevron.classList.remove('rotate-180');
-        text.textContent = 'Show Logs';
+        label.textContent = 'Show Logs';
       }
     }
 
+    function popToast(msg, type = 'success') {
+      const toast = document.getElementById('toastNotification');
+      const text = document.getElementById('toastNotificationText');
+      const icon = document.getElementById('toastNotificationIcon');
+
+      text.textContent = msg;
+      if (type === 'error') {
+        icon.className = 'fa-solid fa-circle-xmark text-rose-400 text-base';
+      } else {
+        icon.className = 'fa-solid fa-circle-check text-emerald-400 text-base';
+      }
+
+      toast.classList.remove('translate-y-24', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-24', 'opacity-0');
+      }, 3000);
+    }
+
     // -------------------------------------------------------------------------
-    // Tab Navigation
+    // Navigation Routing
     // -------------------------------------------------------------------------
-    function switchTab(tabId) {
-      ['catalog', 'orders', 'account'].forEach(id => {
-        document.getElementById(\`tabContent-\${id}\`).classList.add('hidden');
-        const btn = document.getElementById(\`tabBtn-\${id}\`);
-        if (btn) {
-          btn.className = 'tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-900 transition flex items-center gap-2';
+    function switchNavTab(tabName) {
+      ['dashboard', 'catalog', 'orders', 'customers', 'settings'].forEach(name => {
+        const view = document.getElementById(\`view-\${name}\`);
+        if (view) view.classList.add('hidden');
+        const link = document.getElementById(\`navTab-\${name}\`);
+        if (link) {
+          link.className = 'nav-link text-slate-400 hover:text-white pb-1 transition flex items-center gap-2';
         }
       });
 
-      document.getElementById(\`tabContent-\${tabId}\`).classList.remove('hidden');
-      const activeBtn = document.getElementById(\`tabBtn-\${tabId}\`);
-      if (activeBtn) {
-        activeBtn.className = 'tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-white bg-slate-800 border border-slate-700 transition flex items-center gap-2';
+      const activeView = document.getElementById(\`view-\${tabName}\`);
+      if (activeView) activeView.classList.remove('hidden');
+      const activeLink = document.getElementById(\`navTab-\${tabName}\`);
+      if (activeLink) {
+        activeLink.className = 'nav-link text-sky-400 border-b-2 border-sky-400 pb-1 font-semibold flex items-center gap-2';
       }
 
-      if (tabId === 'orders') fetchOrders();
-      if (tabId === 'catalog') fetchInventory();
+      if (tabName === 'catalog') renderCatalogTable();
+      if (tabName === 'orders') fetchOrders();
     }
 
     // -------------------------------------------------------------------------
-    // Authentication Operations
+    // Authentication
     // -------------------------------------------------------------------------
-    async function autoLoginDemoUser() {
+    async function initAutoLogin() {
       try {
         const res = await fetch('/api/auth/login', {
           method: 'POST',
@@ -525,9 +644,8 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         });
         const data = await res.json();
         if (res.ok && data.token) {
-          saveAuth(data.token, data.user);
+          storeAuth(data.token, data.user);
         } else {
-          // If login fails, try registration then login
           await fetch('/api/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -540,53 +658,37 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
           });
           const retryData = await retry.json();
           if (retry.ok && retryData.token) {
-            saveAuth(retryData.token, retryData.user);
+            storeAuth(retryData.token, retryData.user);
           }
         }
       } catch (err) {
-        logTrace(\`Auto-auth notice: \${err.message}\`, 'sys');
+        pushTrace('Auth bootstrap: ' + err.message, 'sys');
       } finally {
         fetchInventory();
         fetchOrders();
       }
     }
 
-    function saveAuth(token, user) {
-      authToken = token;
-      currentAuthUser = user;
-      localStorage.setItem('apex_jwt_token', token);
-      localStorage.setItem('apex_user', JSON.stringify(user));
-      updateAuthHeader();
-      logTrace(\`Authenticated as \${user.email || 'customer'}. Token valid 24h.\`);
+    function storeAuth(token, user) {
+      jwtToken = token;
+      authenticatedUser = user;
+      localStorage.setItem('app_jwt_token', token);
+      localStorage.setItem('app_user', JSON.stringify(user));
+      updateProfileDisplay();
+      pushTrace(\`Session established for \${user.email || 'customer'}\`);
     }
 
-    function updateAuthHeader() {
-      const dot = document.getElementById('accountStatusDot');
-      const badge = document.getElementById('profileBadge');
-      const nameDisp = document.getElementById('profileNameDisplay');
-      const emailDisp = document.getElementById('profileEmailDisplay');
-      const tokenBox = document.getElementById('jwtTokenBox');
-      const tokenDisp = document.getElementById('jwtTokenDisplay');
-
-      if (authToken) {
-        dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
-        badge.className = 'text-xs font-semibold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
-        badge.textContent = 'Authenticated';
-        nameDisp.textContent = currentAuthUser ? (currentAuthUser.name || 'Active Customer') : 'Active Customer';
-        emailDisp.textContent = currentAuthUser ? (currentAuthUser.email || 'customer@ecommerce.local') : 'customer@ecommerce.local';
-        tokenBox.classList.remove('hidden');
-        tokenDisp.textContent = authToken;
-      } else {
-        dot.className = 'w-2 h-2 rounded-full bg-amber-400';
-        badge.className = 'text-xs font-semibold px-3 py-1 rounded-full bg-slate-800 text-slate-400';
-        badge.textContent = 'Guest';
-        tokenBox.classList.add('hidden');
-      }
+    function updateProfileDisplay() {
+      const email = authenticatedUser ? (authenticatedUser.email || 'customer@ecommerce.local') : 'customer@ecommerce.local';
+      const name = authenticatedUser ? (authenticatedUser.name || 'Customer') : 'Customer';
+      document.getElementById('customerEmailHeader').textContent = email;
+      document.getElementById('customerNameHeader').textContent = name;
+      document.getElementById('jwtTokenString').textContent = jwtToken;
     }
 
-    async function handleAccountLogin() {
-      const email = document.getElementById('accEmailInput').value;
-      const password = document.getElementById('accPassInput').value;
+    async function handleUserLogin() {
+      const email = document.getElementById('switchEmailInput').value;
+      const password = document.getElementById('switchPassInput').value;
       try {
         const res = await fetch('/api/auth/login', {
           method: 'POST',
@@ -595,163 +697,140 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         });
         const data = await res.json();
         if (res.ok && data.token) {
-          saveAuth(data.token, data.user);
-          showToast('Welcome back! Logged in successfully.');
-          fetchInventory();
-          fetchOrders();
+          storeAuth(data.token, data.user);
+          popToast('Logged in successfully!');
         } else {
-          showToast(data.message || 'Login failed', 'error');
+          popToast(data.message || 'Login failed', 'error');
         }
-      } catch (err) {
-        showToast(err.message, 'error');
+      } catch (e) {
+        popToast(e.message, 'error');
       }
     }
 
-    async function handleAccountRegister() {
-      const name = document.getElementById('accNameInput').value;
-      const email = document.getElementById('accEmailInput').value;
-      const password = document.getElementById('accPassInput').value;
+    async function handleUserRegister() {
+      const email = document.getElementById('switchEmailInput').value;
+      const password = document.getElementById('switchPassInput').value;
       try {
         const res = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, password })
+          body: JSON.stringify({ name: 'Store Customer', email, password })
         });
         const data = await res.json();
         if (res.ok) {
-          showToast('Account registered! Signing you in...');
-          handleAccountLogin();
+          popToast('Registration successful! Signing in...');
+          handleUserLogin();
         } else {
-          showToast(data.message || 'Registration failed', 'error');
+          popToast(data.message || 'Registration failed', 'error');
         }
-      } catch (err) {
-        showToast(err.message, 'error');
+      } catch (e) {
+        popToast(e.message, 'error');
       }
     }
 
-    function copyAuthToken() {
-      navigator.clipboard.writeText(authToken);
-      showToast('JWT token copied to clipboard');
+    function copyTokenToClipboard() {
+      navigator.clipboard.writeText(jwtToken);
+      popToast('Token copied to clipboard');
     }
 
     // -------------------------------------------------------------------------
-    // Catalog & Inventory Operations
+    // Product Catalog & Inventory
     // -------------------------------------------------------------------------
     async function fetchInventory() {
       try {
-        const headers = authToken ? { 'Authorization': \`Bearer \${authToken}\` } : {};
+        const headers = jwtToken ? { 'Authorization': \`Bearer \${jwtToken}\` } : {};
         const res = await fetch('/api/inventory?limit=50', { headers });
         const data = await res.json();
-        allProducts = data.products || data.data || [];
+        catalogItems = data.products || data.data || [];
 
-        if (allProducts.length === 0) {
-          // If empty, auto-seed
+        if (catalogItems.length === 0) {
           await handleSeedCatalog(false);
           return;
         }
 
-        renderProducts(allProducts);
-        logTrace(\`Loaded \${allProducts.length} items from Inventory Service (:3003)\`);
+        renderProducts(catalogItems);
+        renderCatalogTable();
+        pushTrace(\`Catalog synchronized: \${catalogItems.length} products loaded from port 3003\`);
       } catch (err) {
-        logTrace(\`Inventory fetch error: \${err.message}\`, 'error');
+        pushTrace('Inventory sync failure: ' + err.message, 'error');
       }
     }
 
     async function handleSeedCatalog(notify = true) {
       try {
-        const headers = authToken ? { 'Authorization': \`Bearer \${authToken}\` } : {};
+        const headers = jwtToken ? { 'Authorization': \`Bearer \${jwtToken}\` } : {};
         const res = await fetch('/api/inventory/seed', { method: 'POST', headers });
         const data = await res.json();
-        if (notify) showToast(data.message || 'Sample catalog seeded!');
+        if (notify) popToast(data.message || 'Products seeded!');
         const fetchRes = await fetch('/api/inventory?limit=50', { headers });
         const fetchData = await fetchRes.json();
-        allProducts = fetchData.products || fetchData.data || [];
-        renderProducts(allProducts);
+        catalogItems = fetchData.products || fetchData.data || [];
+        renderProducts(catalogItems);
+        renderCatalogTable();
       } catch (err) {
-        if (notify) showToast('Seeding failed: ' + err.message, 'error');
+        if (notify) popToast('Seeding error: ' + err.message, 'error');
       }
     }
 
-    function setCategoryFilter(category) {
-      currentCategory = category;
-      document.querySelectorAll('#categoryFilterBar .cat-pill').forEach(pill => {
-        pill.className = 'cat-pill px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:bg-slate-800 transition whitespace-nowrap';
+    function filterByCategory(category) {
+      activeCategory = category;
+      document.querySelectorAll('#categoryChips .cat-chip').forEach(c => {
+        c.className = 'cat-chip px-3.5 py-1 rounded-lg text-xs font-medium bg-[#1e293b] text-slate-300 hover:bg-slate-800 transition whitespace-nowrap border border-slate-700/60';
       });
-      event.target.className = 'cat-pill active px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white transition whitespace-nowrap';
-      filterCatalog();
+      event.target.className = 'cat-chip active px-3.5 py-1 rounded-lg text-xs font-semibold bg-blue-600 text-white transition whitespace-nowrap shadow-sm';
+      applyCatalogFilters();
     }
 
-    function filterCatalog() {
-      const query = document.getElementById('searchInput').value.toLowerCase();
-      let filtered = allProducts.filter(p => {
-        const matchesQuery = p.name.toLowerCase().includes(query) || p.sku.toLowerCase().includes(query);
+    function applyCatalogFilters() {
+      const q = document.getElementById('productSearchInput').value.toLowerCase();
+      const filtered = catalogItems.filter(p => {
+        const matchesQuery = p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q);
         let matchesCat = true;
-        if (currentCategory !== 'all') {
-          matchesCat = p.name.toLowerCase().includes(currentCategory.toLowerCase()) || 
-                       p.sku.toLowerCase().includes(currentCategory.substring(0, 3).toLowerCase());
+        if (activeCategory !== 'all') {
+          matchesCat = p.name.toLowerCase().includes(activeCategory.toLowerCase()) || 
+                       p.sku.toLowerCase().includes(activeCategory.substring(0, 3).toLowerCase());
         }
         return matchesQuery && matchesCat;
       });
       renderProducts(filtered);
     }
 
-    function getProductIcon(name) {
-      const n = name.toLowerCase();
-      if (n.includes('monitor')) return 'fa-desktop text-blue-400';
-      if (n.includes('keyboard')) return 'fa-keyboard text-emerald-400';
-      if (n.includes('mouse')) return 'fa-computer-mouse text-purple-400';
-      if (n.includes('headphone') || n.includes('audio')) return 'fa-headphones text-amber-400';
-      return 'fa-microchip text-indigo-400';
-    }
-
+    // Render White Cards matching reference image
     function renderProducts(products) {
-      const grid = document.getElementById('productsGrid');
+      const container = document.getElementById('productGridContainer');
       if (products.length === 0) {
-        grid.innerHTML = \`
-          <div class="col-span-full py-16 text-center text-slate-500 space-y-3">
-            <i class="fa-solid fa-box-open text-4xl text-slate-600"></i>
-            <p class="text-sm">No products matched your search criteria.</p>
-            <button onclick="document.getElementById('searchInput').value=''; setCategoryFilter('all');" class="text-xs text-indigo-400 hover:underline">Reset Filters</button>
+        container.innerHTML = \`
+          <div class="col-span-full py-16 text-center text-slate-400 space-y-2">
+            <i class="fa-solid fa-box-open text-3xl text-slate-500"></i>
+            <p class="text-xs">No products found matching your filter criteria</p>
           </div>
         \`;
         return;
       }
 
-      grid.innerHTML = products.map(p => {
-        const icon = getProductIcon(p.name);
-        const stockStatus = p.stock > 10 
-          ? \`<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">\${p.stock} In Stock</span>\`
-          : (p.stock > 0 
-              ? \`<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">Only \${p.stock} Left</span>\`
-              : \`<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">Sold Out</span>\`);
-
+      container.innerHTML = products.map((p, idx) => {
+        const imgUrl = productImages[p.id] || productImages[(idx % 8) + 1];
         return \`
-          <div class="glass-card rounded-3xl p-5 border border-slate-800 hover:border-indigo-500/40 transition-all duration-300 flex flex-col justify-between group shadow-lg hover:shadow-indigo-500/10">
+          <div class="bg-white text-slate-900 rounded-2xl p-3.5 shadow-md border border-slate-200/90 hover:shadow-xl transition-all duration-200 flex flex-col justify-between group">
             <div>
-              <!-- Product Image/Icon Box -->
-              <div class="h-40 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-800/80 border border-slate-800 flex items-center justify-center mb-4 group-hover:scale-[1.02] transition-transform">
-                <i class="fa-solid \${icon} text-5xl opacity-80 group-hover:opacity-100 transition"></i>
+              <!-- Product Image Container -->
+              <div class="h-36 rounded-xl bg-slate-50 overflow-hidden flex items-center justify-center mb-3 relative">
+                <img src="\${imgUrl}" alt="\${p.name}" class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300">
+                <span class="absolute top-2 left-2 bg-slate-950/70 text-white text-[9px] font-mono font-bold px-2 py-0.5 rounded-full backdrop-blur-sm">
+                  \${p.sku}
+                </span>
               </div>
 
-              <!-- Badges -->
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-[10px] font-mono text-slate-400 font-semibold">\${p.sku}</span>
-                \${stockStatus}
-              </div>
-
-              <!-- Title -->
-              <h3 class="font-bold text-white text-base leading-snug mb-1 line-clamp-2">\${p.name}</h3>
-              <p class="text-xs text-slate-400 mb-4">Atomic Redis Lock Protected</p>
+              <!-- Product Info -->
+              <h3 class="font-bold text-xs text-slate-800 leading-tight mb-1 truncate" title="\${p.name}">\${p.name}</h3>
+              <p class="text-[10px] text-slate-400 mb-2">\${p.stock > 0 ? \`\${p.stock} in stock\` : 'Out of stock'}</p>
             </div>
 
             <!-- Price & Add to Cart -->
-            <div class="pt-4 border-t border-slate-800/80 flex items-center justify-between">
-              <div>
-                <span class="text-[10px] text-slate-400 uppercase font-semibold block">Price</span>
-                <span class="text-xl font-extrabold font-mono text-white">$\${Number(p.price).toFixed(2)}</span>
-              </div>
-              <button onclick="addToCart(\${p.id})" \${p.stock <= 0 ? 'disabled' : ''} class="\${p.stock <= 0 ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30'} px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2">
-                <i class="fa-solid fa-cart-plus"></i> Add to Cart
+            <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+              <span class="text-sm font-extrabold text-slate-900 font-mono">$\${Number(p.price).toFixed(2)}</span>
+              <button onclick="addProductToCart(\${p.id})" class="bg-[#1e60d5] hover:bg-blue-600 text-white px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition flex items-center gap-1 shadow-sm">
+                <i class="fa-solid fa-cart-plus text-[10px]"></i> Add to Cart
               </button>
             </div>
           </div>
@@ -759,34 +838,45 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       }).join('');
     }
 
-    // -------------------------------------------------------------------------
-    // Shopping Cart Logic
-    // -------------------------------------------------------------------------
-    function toggleCartDrawer(open) {
-      const drawer = document.getElementById('cartDrawer');
-      const backdrop = document.getElementById('cartDrawerBackdrop');
-      if (open) {
-        backdrop.classList.remove('hidden');
-        drawer.classList.remove('translate-x-full');
-      } else {
-        backdrop.classList.add('hidden');
-        drawer.classList.add('translate-x-full');
-      }
+    function renderCatalogTable() {
+      const tbody = document.getElementById('catalogTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = catalogItems.map(p => \`
+        <tr class="hover:bg-slate-900/40 transition">
+          <td class="p-3.5 font-mono text-slate-400">#\${p.id}</td>
+          <td class="p-3.5 font-semibold text-white">\${p.name}</td>
+          <td class="p-3.5 font-mono text-slate-400">\${p.sku}</td>
+          <td class="p-3.5 font-bold font-mono text-emerald-400">$\${Number(p.price).toFixed(2)}</td>
+          <td class="p-3.5">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold \${p.stock > 0 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400'}">
+              \${p.stock} Units
+            </span>
+          </td>
+          <td class="p-3.5 text-right">
+            <button onclick="addProductToCart(\${p.id}); switchNavTab('dashboard');" class="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold">
+              Add to Cart
+            </button>
+          </td>
+        </tr>
+      \`).join('');
     }
 
-    function addToCart(productId) {
-      const product = allProducts.find(p => p.id === productId);
+    // -------------------------------------------------------------------------
+    // Shopping Cart & Checkout
+    // -------------------------------------------------------------------------
+    function addProductToCart(productId) {
+      const product = catalogItems.find(p => p.id === productId);
       if (!product) return;
 
-      const existing = cart.find(item => item.id === productId);
+      const existing = shoppingCart.find(i => i.id === productId);
       if (existing) {
         if (existing.quantity >= product.stock) {
-          showToast(\`Cannot add more than available stock (\${product.stock})\`, 'error');
+          popToast('Max available stock in cart', 'error');
           return;
         }
         existing.quantity += 1;
       } else {
-        cart.push({
+        shoppingCart.push({
           id: product.id,
           name: product.name,
           sku: product.sku,
@@ -796,192 +886,212 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         });
       }
 
-      saveCart();
-      renderCart();
-      showToast(\`Added \${product.name} to cart!\`);
-      logTrace(\`Cart updated: Added \${product.name} (Qty: 1)\`);
+      persistCart();
+      renderCartUI();
+      popToast(\`Added \${product.name} to cart\`);
+      pushTrace(\`Cart: Added item #\${product.id} (Qty: 1)\`);
     }
 
-    function updateCartItemQty(productId, delta) {
-      const item = cart.find(i => i.id === productId);
+    function modifyCartItemQuantity(productId, delta) {
+      const item = shoppingCart.find(i => i.id === productId);
       if (!item) return;
 
       item.quantity += delta;
       if (item.quantity <= 0) {
-        cart = cart.filter(i => i.id !== productId);
+        shoppingCart = shoppingCart.filter(i => i.id !== productId);
       } else if (item.quantity > item.maxStock) {
         item.quantity = item.maxStock;
-        showToast('Max available stock reached', 'error');
+        popToast('Max available stock reached', 'error');
       }
 
-      saveCart();
-      renderCart();
+      persistCart();
+      renderCartUI();
     }
 
-    function removeCartItem(productId) {
-      cart = cart.filter(i => i.id !== productId);
-      saveCart();
-      renderCart();
+    function persistCart() {
+      localStorage.setItem('app_cart', JSON.stringify(shoppingCart));
     }
 
-    function saveCart() {
-      localStorage.setItem('apex_cart', JSON.stringify(cart));
-      const totalItems = cart.reduce((sum, i) => sum + i.quantity, 0);
-      document.getElementById('cartCountBadge').textContent = totalItems;
-    }
+    function renderCartUI() {
+      const listEl = document.getElementById('cartItemsList');
+      const countBadge = document.getElementById('cartHeaderBadge');
+      const subtotalEl = document.getElementById('cartSubtotalText');
+      const totalEl = document.getElementById('cartTotalText');
+      const checkoutBtn = document.getElementById('cartCheckoutBtn');
 
-    function renderCart() {
-      const container = document.getElementById('cartItemsContainer');
-      const subtotalEl = document.getElementById('cartSubtotal');
-      const totalEl = document.getElementById('cartTotal');
-      const checkoutBtn = document.getElementById('checkoutBtn');
+      persistCart();
 
-      saveCart();
+      const totalItemCount = shoppingCart.reduce((acc, item) => acc + item.quantity, 0);
+      countBadge.textContent = \`\${totalItemCount} Items\`;
 
-      if (cart.length === 0) {
-        container.innerHTML = \`
-          <div class="text-center py-20 text-slate-500 space-y-3">
-            <i class="fa-solid fa-bag-shopping text-4xl text-slate-700"></i>
-            <p class="text-sm font-medium">Your shopping cart is empty.</p>
-            <button onclick="toggleCartDrawer(false)" class="text-xs text-indigo-400 hover:underline">Explore Products</button>
+      if (shoppingCart.length === 0) {
+        listEl.innerHTML = \`
+          <div class="py-8 text-center text-slate-400 space-y-2">
+            <i class="fa-solid fa-cart-shopping text-2xl text-slate-300"></i>
+            <p class="text-xs">Your cart is currently empty</p>
+            <p class="text-[10px] text-slate-400">Click "Add to Cart" on any product</p>
           </div>
         \`;
         subtotalEl.textContent = '$0.00';
         totalEl.textContent = '$0.00';
         checkoutBtn.disabled = true;
-        checkoutBtn.className = 'w-full bg-slate-800 text-slate-500 font-bold py-3 rounded-xl text-sm cursor-not-allowed';
         return;
       }
 
       checkoutBtn.disabled = false;
-      checkoutBtn.className = 'w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-3 rounded-xl text-sm transition shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 cursor-pointer';
+      let grandTotal = 0;
 
-      let total = 0;
-      container.innerHTML = cart.map(item => {
-        const itemTotal = item.price * item.quantity;
-        total += itemTotal;
+      listEl.innerHTML = shoppingCart.map((item, idx) => {
+        const itemLineTotal = item.price * item.quantity;
+        grandTotal += itemLineTotal;
+        const imgUrl = productImages[item.id] || productImages[(idx % 8) + 1];
+
         return \`
-          <div class="bg-slate-950/70 p-3.5 rounded-2xl border border-slate-800 flex items-center justify-between space-x-3">
+          <div class="py-2.5 flex items-center justify-between gap-3 text-xs">
+            <img src="\${imgUrl}" class="w-10 h-10 object-cover rounded-lg border border-slate-200">
             <div class="flex-1 min-w-0">
-              <h4 class="text-xs font-bold text-white truncate">\${item.name}</h4>
-              <div class="text-[11px] font-mono text-emerald-400 font-semibold">$\${item.price.toFixed(2)}</div>
+              <h4 class="font-bold text-slate-800 truncate" title="\${item.name}">\${item.name}</h4>
+              <div class="flex items-center gap-2 mt-0.5">
+                <span class="text-[10px] text-slate-400 font-mono">$\${item.price.toFixed(2)}</span>
+                <div class="flex items-center gap-1.5 bg-slate-100 rounded px-1.5 py-0.5">
+                  <button onclick="modifyCartItemQuantity(\${item.id}, -1)" class="text-slate-600 hover:text-black">&minus;</button>
+                  <span class="font-bold text-slate-800 text-[10px]">\${item.quantity}</span>
+                  <button onclick="modifyCartItemQuantity(\${item.id}, 1)" class="text-slate-600 hover:text-black">&plus;</button>
+                </div>
+              </div>
             </div>
-
-            <!-- Qty Stepper -->
-            <div class="flex items-center space-x-2 bg-slate-900 px-2 py-1 rounded-xl border border-slate-800">
-              <button onclick="updateCartItemQty(\${item.id}, -1)" class="w-5 h-5 flex items-center justify-center text-xs text-slate-400 hover:text-white">&minus;</button>
-              <span class="text-xs font-mono font-bold text-white px-1">\${item.quantity}</span>
-              <button onclick="updateCartItemQty(\${item.id}, 1)" class="w-5 h-5 flex items-center justify-center text-xs text-slate-400 hover:text-white">&plus;</button>
-            </div>
-
-            <!-- Total & Remove -->
             <div class="text-right">
-              <div class="text-xs font-mono font-bold text-white">$\${itemTotal.toFixed(2)}</div>
-              <button onclick="removeCartItem(\${item.id})" class="text-[10px] text-rose-400 hover:text-rose-300">Remove</button>
+              <div class="font-bold font-mono text-slate-900">$\${itemLineTotal.toFixed(2)}</div>
+              <button onclick="modifyCartItemQuantity(\${item.id}, -999)" class="text-[10px] text-rose-500 hover:underline">Remove</button>
             </div>
           </div>
         \`;
       }).join('');
 
-      subtotalEl.textContent = \`$\${total.toFixed(2)}\`;
-      totalEl.textContent = \`$\${total.toFixed(2)}\`;
+      subtotalEl.textContent = \`$\${grandTotal.toFixed(2)}\`;
+      totalEl.textContent = \`$\${grandTotal.toFixed(2)}\`;
     }
 
-    // -------------------------------------------------------------------------
-    // Checkout & Order Placement (Asynchronous RabbitMQ + Redis Lock)
-    // -------------------------------------------------------------------------
-    async function handleCheckout() {
-      if (!authToken) {
-        showToast('Please sign in to place an order', 'error');
-        toggleCartDrawer(false);
-        switchTab('account');
+    function openCheckoutModal() {
+      if (shoppingCart.length === 0) return;
+      const modal = document.getElementById('checkoutModal');
+      const itemsContainer = document.getElementById('checkoutModalItems');
+      const totalEl = document.getElementById('checkoutModalTotal');
+
+      let grandTotal = 0;
+      itemsContainer.innerHTML = shoppingCart.map(item => {
+        const line = item.price * item.quantity;
+        grandTotal += line;
+        return \`
+          <div class="py-2 flex justify-between items-center text-xs">
+            <div>
+              <div class="font-bold text-slate-800">\${item.name}</div>
+              <div class="text-[10px] text-slate-400">Qty: \${item.quantity} &times; $\${item.price.toFixed(2)}</div>
+            </div>
+            <span class="font-mono font-bold text-slate-900">$\${line.toFixed(2)}</span>
+          </div>
+        \`;
+      }).join('');
+
+      totalEl.textContent = \`$\${grandTotal.toFixed(2)}\`;
+      modal.classList.remove('hidden');
+    }
+
+    function closeCheckoutModal() {
+      document.getElementById('checkoutModal').classList.add('hidden');
+    }
+
+    async function executeCheckoutOrder() {
+      if (!jwtToken) {
+        popToast('Please authenticate first', 'error');
+        closeCheckoutModal();
+        switchNavTab('customers');
         return;
       }
 
-      if (cart.length === 0) return;
+      const btn = document.getElementById('confirmOrderBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Locking Stock via Redis...';
 
-      const checkoutBtn = document.getElementById('checkoutBtn');
-      checkoutBtn.disabled = true;
-      checkoutBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Reserving Stock via Redis Lock...';
-
-      const items = cart.map(item => ({
-        productId: item.id,
-        quantity: item.quantity,
-        price: item.price
+      const items = shoppingCart.map(i => ({
+        productId: i.id,
+        quantity: i.quantity,
+        price: i.price
       }));
 
-      logTrace(\`Initiating checkout transaction for \${items.length} items...\`);
+      pushTrace(\`Executing order checkout for \${items.length} unique products...\`);
 
       try {
         const res = await fetch('/api/orders', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': \`Bearer \${authToken}\`
+            'Authorization': \`Bearer \${jwtToken}\`
           },
           body: JSON.stringify({ items })
         });
-
         const data = await res.json();
 
         if (res.ok) {
-          logTrace(\`Order #\${data.id || data.orderId} created! Status: \${data.status}. RabbitMQ event dispatched.\`);
-          cart = [];
-          saveCart();
-          renderCart();
-          toggleCartDrawer(false);
+          pushTrace(\`Order #\${data.id || data.orderId} written to MySQL. RabbitMQ event broadcast.\`);
+          shoppingCart = [];
+          persistCart();
+          renderCartUI();
+          closeCheckoutModal();
 
-          showToast(\`Order #\${data.id || data.orderId} placed successfully!\`);
+          popToast(\`Order #\${data.id || data.orderId} confirmed successfully!\`);
           fetchOrders();
           fetchInventory();
-          switchTab('orders');
+          switchNavTab('orders');
         } else {
-          showToast(data.message || 'Checkout failed', 'error');
-          logTrace(\`Checkout error: \${JSON.stringify(data)}\`, 'error');
+          popToast(data.message || 'Checkout error', 'error');
+          pushTrace(\`Checkout rejected: \${JSON.stringify(data)}\`, 'error');
         }
       } catch (err) {
-        showToast('Network error during checkout: ' + err.message, 'error');
+        popToast('Checkout network exception: ' + err.message, 'error');
       } finally {
-        checkoutBtn.disabled = false;
-        checkoutBtn.innerHTML = '<i class="fa-solid fa-lock text-xs"></i> Place Order with Redis Lock';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-lock text-xs text-emerald-400"></i> Place Order';
       }
     }
 
     // -------------------------------------------------------------------------
-    // Order History & Modal Details
+    // Order History & Detail Modal
     // -------------------------------------------------------------------------
     async function fetchOrders() {
-      if (!authToken) return;
+      if (!jwtToken) return;
       try {
         const res = await fetch('/api/orders', {
-          headers: { 'Authorization': \`Bearer \${authToken}\` }
+          headers: { 'Authorization': \`Bearer \${jwtToken}\` }
         });
         const data = await res.json();
-        allOrders = data.orders || [];
+        userOrders = data.orders || [];
 
-        const badge = document.getElementById('ordersCountBadge');
-        if (allOrders.length > 0) {
-          badge.textContent = allOrders.length;
-          badge.classList.remove('hidden');
+        const tabBadge = document.getElementById('ordersTabCount');
+        if (userOrders.length > 0) {
+          tabBadge.textContent = userOrders.length;
+          tabBadge.classList.remove('hidden');
         } else {
-          badge.classList.add('hidden');
+          tabBadge.classList.add('hidden');
         }
 
-        renderOrders(allOrders);
-        logTrace(\`Retrieved \${allOrders.length} order records from Order Service\`);
+        renderOrdersList(userOrders);
+        pushTrace(\`Fetched \${userOrders.length} order history records from MySQL\`);
       } catch (err) {
-        logTrace(\`Fetch orders error: \${err.message}\`, 'error');
+        pushTrace('Order history fetch error: ' + err.message, 'error');
       }
     }
 
-    function renderOrders(orders) {
-      const container = document.getElementById('ordersContainer');
+    function renderOrdersList(orders) {
+      const container = document.getElementById('ordersListContainer');
+      if (!container) return;
+
       if (orders.length === 0) {
         container.innerHTML = \`
-          <div class="glass-card p-12 text-center rounded-3xl text-slate-400 space-y-3">
+          <div class="bg-[#182230] border border-slate-800 rounded-2xl p-12 text-center text-slate-400 space-y-2">
             <i class="fa-solid fa-receipt text-3xl text-slate-600"></i>
-            <p class="text-sm">You haven't placed any orders yet.</p>
-            <button onclick="switchTab('catalog')" class="text-xs text-indigo-400 hover:underline">Explore Store Catalog</button>
+            <p class="text-sm font-medium">No order transactions found.</p>
+            <button onclick="switchNavTab('dashboard')" class="text-xs text-sky-400 hover:underline">Explore Products</button>
           </div>
         \`;
         return;
@@ -989,30 +1099,28 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
 
       container.innerHTML = orders.map(o => {
         const dateStr = new Date(o.createdAt || o.created_at).toLocaleString();
-        const itemCount = o.items ? o.items.length : 1;
+        const count = o.items ? o.items.length : 1;
         return \`
-          <div class="glass-card p-5 rounded-2xl border border-slate-800 hover:border-slate-700 transition flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div class="space-y-1">
-              <div class="flex items-center space-x-3">
+          <div class="bg-[#182230] border border-slate-800 hover:border-slate-700 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition shadow-md">
+            <div>
+              <div class="flex items-center gap-3">
                 <span class="font-mono text-sm font-bold text-white">Order #\${o.id}</span>
-                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
                   \${o.status.toUpperCase()}
                 </span>
               </div>
-              <div class="text-xs text-slate-400 flex items-center space-x-2">
-                <span>\${dateStr}</span>
-                <span>&bull;</span>
-                <span>\${itemCount} \${itemCount === 1 ? 'item' : 'items'}</span>
-              </div>
+              <p class="text-xs text-slate-400 mt-1">
+                <span>\${dateStr}</span> &bull; <span>\${count} \${count === 1 ? 'item' : 'items'}</span>
+              </p>
             </div>
 
-            <div class="flex items-center space-x-4 w-full sm:w-auto justify-between sm:justify-end">
+            <div class="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
               <div class="text-right">
-                <span class="text-[10px] text-slate-400 uppercase block font-semibold">Total</span>
-                <span class="text-lg font-bold font-mono text-emerald-400">$\${Number(o.total).toFixed(2)}</span>
+                <span class="text-[10px] text-slate-400 uppercase font-semibold block">Total</span>
+                <span class="text-base font-bold font-mono text-emerald-400">$\${Number(o.total).toFixed(2)}</span>
               </div>
-              <button onclick="openOrderModal(\${o.id})" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-xl text-xs font-semibold transition border border-slate-700 flex items-center gap-1.5">
-                <i class="fa-solid fa-eye text-indigo-400"></i> View Receipt
+              <button onclick="openOrderDetailPopup(\${o.id})" class="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-sm">
+                <i class="fa-solid fa-file-invoice text-xs"></i> View Receipt
               </button>
             </div>
           </div>
@@ -1020,42 +1128,47 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       }).join('');
     }
 
-    function openOrderModal(orderId) {
-      const order = allOrders.find(o => o.id === orderId);
+    function openOrderDetailPopup(orderId) {
+      const order = userOrders.find(o => o.id === orderId);
       if (!order) return;
 
-      document.getElementById('modalOrderId').textContent = \`Order #\${order.id}\`;
-      document.getElementById('modalOrderStatus').textContent = order.status.toUpperCase();
-      document.getElementById('modalOrderDate').textContent = new Date(order.createdAt || order.created_at).toLocaleString();
-      document.getElementById('modalOrderTotal').textContent = \`$\${Number(order.total).toFixed(2)}\`;
+      document.getElementById('popupOrderId').textContent = \`Order #\${order.id}\`;
+      document.getElementById('popupOrderStatus').textContent = order.status.toUpperCase();
+      document.getElementById('popupOrderDate').textContent = new Date(order.createdAt || order.created_at).toLocaleString();
+      document.getElementById('popupOrderTotal').textContent = \`$\${Number(order.total).toFixed(2)}\`;
 
-      const itemsContainer = document.getElementById('modalOrderItems');
+      const listContainer = document.getElementById('popupOrderItemsList');
       const items = order.items || [];
 
       if (items.length === 0) {
-        itemsContainer.innerHTML = '<div class="text-xs text-slate-500">Item details stored in database</div>';
+        listContainer.innerHTML = '<div class="py-2 text-xs text-slate-400">Item records stored in MySQL order_items</div>';
       } else {
-        itemsContainer.innerHTML = items.map(i => {
-          const matchingProduct = allProducts.find(p => p.id === (i.productId || i.product_id));
-          const name = matchingProduct ? matchingProduct.name : \`Product #\${i.productId || i.product_id}\`;
-          const lineTotal = Number(i.price) * Number(i.quantity);
+        listContainer.innerHTML = items.map(item => {
+          const match = catalogItems.find(p => p.id === (item.productId || item.product_id));
+          const name = match ? match.name : \`Product Item #\${item.productId || item.product_id}\`;
+          const lineTotal = Number(item.price) * Number(item.quantity);
           return \`
-            <div class="p-3 bg-slate-900 rounded-xl border border-slate-800 text-xs flex justify-between items-center">
+            <div class="py-2 flex justify-between items-center text-xs">
               <div>
-                <div class="font-bold text-white">\${name}</div>
-                <div class="text-[10px] text-slate-400 font-mono">Qty: \${i.quantity} &times; $\${Number(i.price).toFixed(2)}</div>
+                <div class="font-bold text-slate-800">\${name}</div>
+                <div class="text-[10px] text-slate-400">Qty: \${item.quantity} &times; $\${Number(item.price).toFixed(2)}</div>
               </div>
-              <div class="font-mono font-bold text-emerald-400">$\${lineTotal.toFixed(2)}</div>
+              <span class="font-mono font-bold text-slate-900">$\${lineTotal.toFixed(2)}</span>
             </div>
           \`;
         }).join('');
       }
 
-      document.getElementById('orderDetailModal').classList.remove('hidden');
+      document.getElementById('orderDetailPopup').classList.remove('hidden');
     }
 
-    function closeOrderModal() {
-      document.getElementById('orderDetailModal').classList.add('hidden');
+    function closeOrderDetailPopup() {
+      document.getElementById('orderDetailPopup').classList.add('hidden');
+    }
+
+    function openAddProductModal() {
+      popToast('Seeding new product catalog items...');
+      handleSeedCatalog();
     }
   </script>
 </body>
