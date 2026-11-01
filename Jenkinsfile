@@ -15,64 +15,75 @@ pipeline {
     environment {
         AWS_REGION = 'ap-southeast-2'
 
+        AWS_ACCOUNT_ID = '297681905096'
+
         ECR_REPOSITORY = 'e-commers'
+
         ECR_REGISTRY = '297681905096.dkr.ecr.ap-southeast-2.amazonaws.com'
 
         S3_BUCKET = 'e-commerce-artifactory'
 
-        IMAGE_TAG = "build-${BUILD_NUMBER}"
+        TEST_STATUS = 'NOT_RUN'
     }
 
     stages {
 
-        // --------------------------------
+        // =====================================
         // 1. GIT CHECKOUT
-        // --------------------------------
+        // =====================================
 
         stage('Git Checkout') {
             steps {
                 checkout scm
 
                 sh '''
-                    echo "Checking Git branch"
+                    echo "========== GIT CHECKOUT =========="
+
                     git branch --show-current
 
-                    echo "Checking latest commit"
                     git log -1 --oneline
+
+                    echo "Source code checkout completed"
                 '''
             }
         }
 
 
-        // --------------------------------
+        // =====================================
         // 2. VERIFY ENVIRONMENT
-        // --------------------------------
+        // =====================================
 
         stage('Verify Environment') {
             steps {
                 sh '''
-                    echo "Node Version:"
+                    set -e
+
+                    echo "========== ENVIRONMENT CHECK =========="
+
+                    echo "Node.js:"
                     node --version
 
-                    echo "NPM Version:"
+                    echo "NPM:"
                     npm --version
 
-                    echo "Docker Version:"
+                    echo "Docker:"
                     docker --version
 
-                    echo "AWS CLI Version:"
+                    echo "AWS CLI:"
                     aws --version
 
                     echo "AWS Identity:"
                     aws sts get-caller-identity
+
+                    echo "Environment verification completed"
                 '''
             }
         }
 
 
-        // --------------------------------
+        // =====================================
         // 3. INSTALL DEPENDENCIES
-        // --------------------------------
+        // =====================================
 
         stage('Install Dependencies') {
             steps {
@@ -88,11 +99,13 @@ pipeline {
 
                     for (service in services) {
 
-                        echo "Installing dependencies for ${service}"
+                        echo "Installing dependencies: ${service}"
 
                         dir(service) {
 
                             sh '''
+                                set -e
+
                                 npm install --no-audit --no-fund
                             '''
                         }
@@ -102,9 +115,9 @@ pipeline {
         }
 
 
-        // --------------------------------
+        // =====================================
         // 4. RUN TESTS
-        // --------------------------------
+        // =====================================
 
         stage('Run Tests') {
             steps {
@@ -122,24 +135,24 @@ pipeline {
 
                     for (service in services) {
 
-                        echo "Running tests for ${service}"
+                        echo "Running tests: ${service}"
 
                         dir(service) {
 
-                            def testStatus = sh(
+                            def status = sh(
                                 script: 'npm test -- --passWithNoTests',
                                 returnStatus: true
                             )
 
-                            if (testStatus != 0) {
+                            if (status != 0) {
 
                                 failedServices.add(service)
 
-                                echo "WARNING: Tests failed for ${service}"
+                                echo "WARNING: ${service} tests failed"
 
                             } else {
 
-                                echo "SUCCESS: Tests passed for ${service}"
+                                echo "SUCCESS: ${service} tests passed"
                             }
                         }
                     }
@@ -151,29 +164,31 @@ pipeline {
                         currentBuild.description =
                             "Test failures: ${failedServices.join(', ')}"
 
-                        echo "WARNING: Some tests failed."
                         echo "Failed services: ${failedServices.join(', ')}"
+
                         echo "Continuing pipeline temporarily."
 
                     } else {
 
                         env.TEST_STATUS = 'PASSED'
 
-                        echo "All microservice tests passed."
+                        echo "All service tests passed."
                     }
                 }
             }
         }
 
 
-        // --------------------------------
+        // =====================================
         // 5. CREATE ARTIFACT
-        // --------------------------------
+        // =====================================
 
         stage('Create Artifact') {
             steps {
                 sh '''
-                    set -e
+                    set -eu
+
+                    echo "========== CREATE ARTIFACT =========="
 
                     ARTIFACT_NAME="ecommerce-${BUILD_NUMBER}.tar.gz"
 
@@ -187,9 +202,9 @@ Branch: $(git branch --show-current)
 Test Status: ${TEST_STATUS}
 EOF
 
-                    echo "Preparing artifact paths"
+                    echo "Collecting project files"
 
-                    ARTIFACT_PATHS=()
+                    set --
 
                     for path in \
                         api-gateway \
@@ -205,7 +220,7 @@ EOF
                         build-info.txt
                     do
                         if [ -e "$path" ]; then
-                            ARTIFACT_PATHS+=("$path")
+                            set -- "$@" "$path"
                         fi
                     done
 
@@ -213,62 +228,85 @@ EOF
 
                     tar -czf "$ARTIFACT_NAME" \
                         --exclude='.git' \
+                        --exclude='*/.git' \
+                        --exclude='node_modules' \
                         --exclude='*/node_modules' \
-                        --exclude='*/.env' \
-                        --exclude='*/.env.*' \
+                        --exclude='*/node_modules/*' \
+                        --exclude='.env*' \
+                        --exclude='*/.env*' \
+                        --exclude='coverage' \
                         --exclude='*/coverage' \
-                        --exclude='*/k8s/secrets' \
-                        --exclude='k8s/secrets' \
+                        --exclude='secrets' \
+                        --exclude='secrets/*' \
+                        --exclude='*/secrets' \
+                        --exclude='*/secrets/*' \
                         --exclude='ecommerce-images.tar' \
-                        "${ARTIFACT_PATHS[@]}"
+                        -- "$@"
 
-                    echo "Artifact created:"
+                    echo "Checking artifact"
+
+                    test -s "$ARTIFACT_NAME"
+
+                    echo "Artifact created successfully"
+
                     ls -lh "$ARTIFACT_NAME"
+
+                    echo "Artifact contents:"
+
+                    tar -tzf "$ARTIFACT_NAME" | head -40
                 '''
 
-                archiveArtifacts artifacts: 'ecommerce-*.tar.gz, build-info.txt',
-                                 fingerprint: true
+                archiveArtifacts(
+                    artifacts: 'ecommerce-*.tar.gz,build-info.txt',
+                    fingerprint: true
+                )
             }
         }
 
 
-        // --------------------------------
+        // =====================================
         // 6. UPLOAD ARTIFACT TO S3
-        // --------------------------------
+        // =====================================
 
         stage('Upload Artifact to S3') {
             steps {
                 sh '''
-                    set -e
+                    set -eu
+
+                    echo "========== S3 ARTIFACT UPLOAD =========="
 
                     ARTIFACT_NAME="ecommerce-${BUILD_NUMBER}.tar.gz"
 
                     S3_PATH="s3://${S3_BUCKET}/ecommerce/releases/build-${BUILD_NUMBER}/"
 
-                    echo "Uploading artifact to S3"
+                    echo "Uploading artifact"
 
                     aws s3 cp "$ARTIFACT_NAME" "$S3_PATH"
 
+                    echo "Uploading build information"
+
                     aws s3 cp build-info.txt "$S3_PATH"
 
-                    echo "S3 upload completed"
+                    echo "Verifying S3 upload"
 
                     aws s3 ls "$S3_PATH"
+
+                    echo "S3 upload completed successfully"
                 '''
             }
         }
 
 
-        // --------------------------------
+        // =====================================
         // 7. ECR LOGIN
-        // --------------------------------
+        // =====================================
 
         stage('ECR Login') {
             steps {
                 sh '''
-                    set -e
+                    set -eu
 
-                    echo "Logging in to Amazon ECR"
+                    echo "========== ECR LOGIN =========="
 
                     aws ecr get-login-password \
                         --region "$AWS_REGION" \
@@ -282,9 +320,9 @@ EOF
         }
 
 
-        // --------------------------------
+        // =====================================
         // 8. BUILD DOCKER IMAGES
-        // --------------------------------
+        // =====================================
 
         stage('Build Docker Images') {
             steps {
@@ -300,7 +338,7 @@ EOF
 
                     for (service in services) {
 
-                        echo "Building Docker image for ${service}"
+                        echo "Building Docker image: ${service}"
 
                         sh """
                             set -e
@@ -315,9 +353,9 @@ EOF
         }
 
 
-        // --------------------------------
-        // 9. PUSH DOCKER IMAGES TO ECR
-        // --------------------------------
+        // =====================================
+        // 9. PUSH DOCKER IMAGES
+        // =====================================
 
         stage('Push Docker Images') {
             steps {
@@ -333,9 +371,11 @@ EOF
 
                     for (service in services) {
 
-                        echo "Pushing ${service} image to ECR"
+                        echo "Pushing Docker image: ${service}"
 
                         sh """
+                            set -e
+
                             docker push \
                                 ${ECR_REGISTRY}/${ECR_REPOSITORY}:${service}-build-${BUILD_NUMBER}
                         """
@@ -345,9 +385,9 @@ EOF
         }
 
 
-        // --------------------------------
+        // =====================================
         // 10. VERIFY ECR IMAGES
-        // --------------------------------
+        // =====================================
 
         stage('Verify ECR Images') {
             steps {
@@ -363,7 +403,7 @@ EOF
 
                     for (service in services) {
 
-                        echo "Verifying ${service} image"
+                        echo "Verifying ECR image: ${service}"
 
                         sh """
                             aws ecr describe-images \
@@ -378,29 +418,35 @@ EOF
     }
 
 
-    // --------------------------------
+    // =====================================
     // POST BUILD ACTIONS
-    // --------------------------------
+    // =====================================
 
     post {
 
         success {
-            echo 'CI Pipeline completed successfully.'
-            echo 'Artifact uploaded to S3.'
-            echo 'Docker images pushed to ECR.'
-            echo "Test status: ${env.TEST_STATUS}"
+            echo "CI Pipeline completed successfully."
+
+            echo "Test Status: ${env.TEST_STATUS}"
+
+            echo "Artifact uploaded to S3."
+
+            echo "Docker images pushed to ECR."
         }
 
         failure {
-            echo 'CI Pipeline failed. Check the Jenkins console output.'
+            echo "CI Pipeline failed."
+
+            echo "Check Jenkins console output."
         }
 
         always {
+
             sh '''
                 docker logout "$ECR_REGISTRY" || true
             '''
 
-            echo 'Pipeline execution finished.'
+            echo "Pipeline execution completed."
         }
     }
 }
