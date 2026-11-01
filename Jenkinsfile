@@ -32,7 +32,7 @@ pipeline {
 
                     for (service in services) {
                         dir(service) {
-                            sh 'npm ci'
+                            sh 'npm install'
                         }
                     }
                 }
