@@ -1,4 +1,3 @@
-```groovy
 pipeline {
     agent any
 
@@ -7,21 +6,39 @@ pipeline {
     }
 
     environment {
-        AWS_REGION = 'ap-southeast-2'
-        AWS_ACCOUNT_ID = '297681905096'
+        AWS_REGION     = 'ap-southeast-2'
         ECR_REPOSITORY = 'e-commers'
-        ECR_REGISTRY = '297681905096.dkr.ecr.ap-southeast-2.amazonaws.com'
-        S3_BUCKET = 'e-commerce-artifactory'
+        ECR_REGISTRY   = '297681905096.dkr.ecr.ap-southeast-2.amazonaws.com'
+        S3_BUCKET      = 'e-commerce-artifactory'
 
         SERVICES = 'api-gateway auth-service order-service inventory-service notification-service'
+        IMAGE_TAG = "build-${BUILD_NUMBER}"
     }
 
     stages {
 
         stage('Git Checkout') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/Abhish7899/ecommerce-microservices-devops.git'
+                echo 'Checking out source code from GitHub'
+                checkout scm
+            }
+        }
+
+        stage('Verify Environment') {
+            steps {
+                sh '''
+                    echo "Node version:"
+                    node --version
+
+                    echo "NPM version:"
+                    npm --version
+
+                    echo "Docker version:"
+                    docker --version
+
+                    echo "AWS identity:"
+                    aws sts get-caller-identity
+                '''
             }
         }
 
@@ -31,6 +48,8 @@ pipeline {
                     def services = env.SERVICES.split(' ')
 
                     for (service in services) {
+                        echo "Installing dependencies: ${service}"
+
                         dir(service) {
                             sh 'npm install'
                         }
@@ -45,6 +64,8 @@ pipeline {
                     def services = env.SERVICES.split(' ')
 
                     for (service in services) {
+                        echo "Running tests: ${service}"
+
                         dir(service) {
                             sh 'npm test -- --passWithNoTests'
                         }
@@ -56,45 +77,74 @@ pipeline {
         stage('Create Build Artifact') {
             steps {
                 sh '''
+                    set -eu
+
                     mkdir -p build-artifacts
 
                     tar -czf build-artifacts/ecommerce-release-${BUILD_NUMBER}.tar.gz \
                         --exclude='.git' \
                         --exclude='node_modules' \
+                        --exclude='**/node_modules' \
                         --exclude='.env' \
                         --exclude='.env.*' \
+                        --exclude='**/.env' \
+                        --exclude='**/.env.*' \
                         --exclude='k8s/secrets' \
-                        --exclude='**/node_modules' \
+                        --exclude='**/coverage' \
                         api-gateway \
                         auth-service \
                         order-service \
                         inventory-service \
                         notification-service \
-                        deploy \
                         k8s \
                         README.md \
                         docker-compose.yml \
                         Jenkinsfile
 
-                    echo "BUILD_NUMBER=${BUILD_NUMBER}" > build-artifacts/build-info.txt
-                    echo "GIT_COMMIT=${GIT_COMMIT}" >> build-artifacts/build-info.txt
-                    echo "IMAGE_TAG=build-${BUILD_NUMBER}" >> build-artifacts/build-info.txt
+                    printf 'BUILD_NUMBER=%s\\nGIT_COMMIT=%s\\nIMAGE_TAG=%s\\nBUILD_DATE=%s\\n' \
+                        "$BUILD_NUMBER" \
+                        "$GIT_COMMIT" \
+                        "$IMAGE_TAG" \
+                        "$(date -u)" \
+                        > build-artifacts/build-info.txt
+
+                    echo "Generated artifacts:"
+                    ls -lh build-artifacts/
                 '''
 
-                archiveArtifacts artifacts: 'build-artifacts/*'
+                archiveArtifacts artifacts: 'build-artifacts/*',
+                    fingerprint: true
             }
         }
 
         stage('Upload Artifact to S3') {
             steps {
                 sh '''
+                    set -eu
+
                     aws s3 cp \
-                    build-artifacts/ecommerce-release-${BUILD_NUMBER}.tar.gz \
-                    s3://${S3_BUCKET}/ecommerce/releases/build-${BUILD_NUMBER}/
-                    
+                        build-artifacts/ecommerce-release-${BUILD_NUMBER}.tar.gz \
+                        s3://${S3_BUCKET}/ecommerce/releases/build-${BUILD_NUMBER}/
+
                     aws s3 cp \
-                    build-artifacts/build-info.txt \
-                    s3://${S3_BUCKET}/ecommerce/releases/build-${BUILD_NUMBER}/
+                        build-artifacts/build-info.txt \
+                        s3://${S3_BUCKET}/ecommerce/releases/build-${BUILD_NUMBER}/
+                '''
+
+                echo "Artifact uploaded to S3 successfully"
+            }
+        }
+
+        stage('ECR Login') {
+            steps {
+                sh '''
+                    set -eu
+
+                    aws ecr get-login-password \
+                        --region ${AWS_REGION} |
+                    docker login \
+                        --username AWS \
+                        --password-stdin ${ECR_REGISTRY}
                 '''
             }
         }
@@ -105,24 +155,15 @@ pipeline {
                     def services = env.SERVICES.split(' ')
 
                     for (service in services) {
+                        echo "Building Docker image: ${service}"
+
                         sh """
                             docker build \
-                            -t ${ECR_REGISTRY}/${ECR_REPOSITORY}:${service}-build-${BUILD_NUMBER} \
-                            ./${service}
+                                -t ${ECR_REGISTRY}/${ECR_REPOSITORY}:${service}-${IMAGE_TAG} \
+                                ./${service}
                         """
                     }
                 }
-            }
-        }
-
-        stage('Login to AWS ECR') {
-            steps {
-                sh '''
-                    aws ecr get-login-password --region ${AWS_REGION} |
-                    docker login \
-                    --username AWS \
-                    --password-stdin ${ECR_REGISTRY}
-                '''
             }
         }
 
@@ -132,9 +173,30 @@ pipeline {
                     def services = env.SERVICES.split(' ')
 
                     for (service in services) {
+                        echo "Pushing Docker image: ${service}"
+
                         sh """
                             docker push \
-                            ${ECR_REGISTRY}/${ECR_REPOSITORY}:${service}-build-${BUILD_NUMBER}
+                                ${ECR_REGISTRY}/${ECR_REPOSITORY}:${service}-${IMAGE_TAG}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Verify ECR Images') {
+            steps {
+                script {
+                    def services = env.SERVICES.split(' ')
+
+                    for (service in services) {
+                        echo "Verifying ECR image: ${service}"
+
+                        sh """
+                            aws ecr describe-images \
+                                --repository-name ${ECR_REPOSITORY} \
+                                --image-ids imageTag=${service}-${IMAGE_TAG} \
+                                --region ${AWS_REGION}
                         """
                     }
                 }
@@ -143,18 +205,36 @@ pipeline {
     }
 
     post {
+
         success {
-            echo "CI Pipeline completed successfully. Build: ${BUILD_NUMBER}"
+            echo """
+            ==========================================
+                  E-COMMERCE CI PIPELINE SUCCESS
+            ==========================================
+            Build Number : ${BUILD_NUMBER}
+            Image Tag    : ${IMAGE_TAG}
+            S3 Bucket    : ${S3_BUCKET}
+            ECR Repo     : ${ECR_REPOSITORY}
+            ==========================================
+            """
         }
 
         failure {
-            echo "CI Pipeline failed. Build: ${BUILD_NUMBER}"
+            echo """
+            ==========================================
+                  E-COMMERCE CI PIPELINE FAILED
+            ==========================================
+            Build Number : ${BUILD_NUMBER}
+            Check Jenkins Console Output.
+            ==========================================
+            """
         }
 
         always {
-            sh 'docker logout ${ECR_REGISTRY} || true'
+            sh 'docker logout "$ECR_REGISTRY" || true'
+            echo 'Pipeline execution completed'
         }
     }
 }
-```
+
 
