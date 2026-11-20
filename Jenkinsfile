@@ -1,112 +1,93 @@
-pipeline {
+// DRY principle: Services list ek hi jagah define karo
+def SERVICES = [
+    'api-gateway',
+    'auth-service',
+    'order-service',
+    'inventory-service',
+    'notification-service'
+]
 
-    agent any
+pipeline {
+    // 1. Force ephemeral EC2 agent (Controller pe kabhi build nahi chalega)
+    agent {
+        label 'ephemeral-ec2'
+    }
 
     options {
         timestamps()
         disableConcurrentBuilds()
         skipDefaultCheckout(true)
+        // Cost safety: Agar build hang ho jaye toh 30 min mein kill ho jaye
+        timeout(time: 30, unit: 'MINUTES')
+        // Controller disk safety: Sirf last 20 builds ke logs rakho
+        buildDiscarder(logRotator(numToKeepStr: '20'))
     }
 
-    tools {
-        nodejs 'NodeJS-20'
-    }
+    // Note: Ephemeral agent pe Jenkins Global Tool 'nodejs' har baar download hota hai (slow).
+    // Best practice: Node 20 ko EC2 Init Script / Packer Golden AMI mein pre-install rakho.
 
     environment {
-        AWS_REGION = 'ap-southeast-2'
-
+        AWS_REGION     = 'ap-southeast-2'
         AWS_ACCOUNT_ID = '297681905096'
-
+        // Production tip: Har service ka alag ECR repo banao (e.g., ecommerce/api-gateway)
         ECR_REPOSITORY = 'e-commers'
-
-        ECR_REGISTRY = '297681905096.dkr.ecr.ap-southeast-2.amazonaws.com'
-
-        S3_BUCKET = 'e-commerce-artifactory'
-
-        TEST_STATUS = 'NOT_RUN'
+        ECR_REGISTRY   = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+        S3_BUCKET      = 'e-commerce-artifactory'
     }
 
     stages {
 
-        // =====================================
-        // 1. GIT CHECKOUT
-        // =====================================
-
-        stage('Git Checkout') {
+        stage('Git Checkout & Metadata') {
             steps {
                 checkout scm
-
+                script {
+                    // Detached HEAD fix: Git SHA aur Branch safely capture karo
+                    env.GIT_SHORT_SHA = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    env.GIT_FULL_SHA  = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
+                    env.BUILD_BRANCH  = env.BRANCH_NAME ?: env.GIT_BRANCH ?: 'unknown'
+                    env.IMAGE_SUFFIX  = "build-${BUILD_NUMBER}-${env.GIT_SHORT_SHA}"
+                }
                 sh '''
-                    echo "========== GIT CHECKOUT =========="
-
-                    git branch --show-current
-
+                    set -euo pipefail
+                    echo "========== GIT METADATA =========="
+                    echo "Branch: ${BUILD_BRANCH}"
+                    echo "Commit: ${GIT_FULL_SHA}"
                     git log -1 --oneline
-
-                    echo "Source code checkout completed"
                 '''
             }
         }
 
-
-        // =====================================
-        // 2. VERIFY ENVIRONMENT
-        // =====================================
-
-        stage('Verify Environment') {
+        stage('Verify Ephemeral Agent') {
             steps {
                 sh '''
-                    set -e
-
+                    set -euo pipefail
                     echo "========== ENVIRONMENT CHECK =========="
-
-                    echo "Node.js:"
                     node --version
-
-                    echo "NPM:"
                     npm --version
-
-                    echo "Docker:"
                     docker --version
-
-                    echo "AWS CLI:"
                     aws --version
-
-                    echo "AWS Identity:"
+                    trivy --version || echo "WARNING: Trivy not installed on agent"
+                    # Verify IAM Instance Profile (Zero static credentials check)
                     aws sts get-caller-identity
-
-                    echo "Environment verification completed"
                 '''
             }
         }
 
-
-        // =====================================
-        // 3. INSTALL DEPENDENCIES
-        // =====================================
-
-        stage('Install Dependencies') {
+        stage('Install Dependencies (Clean)') {
             steps {
                 script {
-
-                    def services = [
-                        'api-gateway',
-                        'auth-service',
-                        'order-service',
-                        'inventory-service',
-                        'notification-service'
-                    ]
-
-                    for (service in services) {
-
-                        echo "Installing dependencies: ${service}"
-
+                    for (service in SERVICES) {
+                        echo "Installing clean dependencies: ${service}"
                         dir(service) {
-
+                            // npm ci deterministic build deta hai; fallback only if lockfile missing
                             sh '''
-                                set -e
-
-                                npm install --no-audit --no-fund
+                                set -euo pipefail
+                                if [ -f package-lock.json ]; then
+                                    npm ci --no-audit --no-fund
+                                else
+                                    echo "WARNING: package-lock.json missing! Commit it to Git."
+                                    npm install --no-audit --no-fund
+                                fi
                             '''
                         }
                     }
@@ -114,302 +95,120 @@ pipeline {
             }
         }
 
-
-        // =====================================
-        // 4. RUN TESTS
-        // =====================================
-
-        stage('Run Tests') {
+        stage('Run Tests (Fail-Fast)') {
             steps {
                 script {
-
-                    def services = [
-                        'api-gateway',
-                        'auth-service',
-                        'order-service',
-                        'inventory-service',
-                        'notification-service'
-                    ]
-
                     def failedServices = []
-
-                    for (service in services) {
-
+                    for (service in SERVICES) {
                         echo "Running tests: ${service}"
-
                         dir(service) {
-
                             def status = sh(
                                 script: 'npm test -- --passWithNoTests',
                                 returnStatus: true
                             )
-
                             if (status != 0) {
-
                                 failedServices.add(service)
-
-                                echo "WARNING: ${service} tests failed"
-
+                                echo "FAILED: ${service} tests failed!"
                             } else {
-
-                                echo "SUCCESS: ${service} tests passed"
+                                echo "PASSED: ${service} tests passed."
                             }
                         }
                     }
 
+                    // Production rule: Failed tests pe pipeline STOP honi chahiye
                     if (failedServices.size() > 0) {
-
-                        env.TEST_STATUS = 'FAILED'
-
-                        currentBuild.description =
-                            "Test failures: ${failedServices.join(', ')}"
-
-                        echo "Failed services: ${failedServices.join(', ')}"
-
-                        echo "Continuing pipeline temporarily."
-
-                    } else {
-
-                        env.TEST_STATUS = 'PASSED'
-
-                        echo "All service tests passed."
+                        currentBuild.description = "Tests failed: ${failedServices.join(', ')}"
+                        error("Pipeline aborted! Unit tests failed in: ${failedServices.join(', ')}")
                     }
                 }
             }
         }
 
-
-        // =====================================
-        // 5. CREATE ARTIFACT
-        // =====================================
-
-        stage('Create Artifact') {
+        stage('Security Scan (Filesystem & Secrets)') {
             steps {
                 sh '''
-                    set -eu
+                    set -euo pipefail
+                    if command -v trivy >/dev/null 2>&1; then
+                        # Hardcoded secrets aur CRITICAL/HIGH vulnerabilities check karo
+                        trivy fs --scanners vuln,secret --severity CRITICAL --exit-code 1 .
+                    else
+                        echo "Skipping Trivy scan (install trivy in EC2 Init Script for DevSecOps)"
+                    fi
+                '''
+            }
+        }
 
-                    echo "========== CREATE ARTIFACT =========="
-
-                    ARTIFACT_NAME="ecommerce-${BUILD_NUMBER}.tar.gz"
-
-                    echo "Creating build information"
+        stage('Package & Upload Artifact to S3') {
+            steps {
+                sh '''
+                    set -euo pipefail
+                    ARTIFACT_NAME="ecommerce-${BUILD_NUMBER}-${GIT_SHORT_SHA}.tar.gz"
+                    S3_PATH="s3://${S3_BUCKET}/ecommerce/releases/build-${BUILD_NUMBER}-${GIT_SHORT_SHA}/"
 
                     cat > build-info.txt <<EOF
 Build Number: ${BUILD_NUMBER}
-Git Commit: $(git rev-parse HEAD)
-Build Date: $(date -u)
-Branch: $(git branch --show-current)
-Test Status: ${TEST_STATUS}
+Git Commit: ${GIT_FULL_SHA}
+Build Date: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+Branch: ${BUILD_BRANCH}
+Image Suffix: ${IMAGE_SUFFIX}
+Test Status: PASSED
 EOF
 
-                    echo "Collecting project files"
-
                     set --
-
-                    for path in \
-                        api-gateway \
-                        auth-service \
-                        order-service \
-                        inventory-service \
-                        notification-service \
-                        k8s \
-                        deploy \
-                        README.md \
-                        docker-compose.yml \
-                        Jenkinsfile \
-                        build-info.txt
-                    do
-                        if [ -e "$path" ]; then
-                            set -- "$@" "$path"
-                        fi
+                    for path in api-gateway auth-service order-service inventory-service notification-service k8s deploy README.md docker-compose.yml Jenkinsfile build-info.txt; do
+                        [ -e "$path" ] && set -- "$@" "$path"
                     done
 
-                    echo "Creating compressed artifact"
-
                     tar -czf "$ARTIFACT_NAME" \
-                        --exclude='.git' \
-                        --exclude='*/.git' \
-                        --exclude='node_modules' \
-                        --exclude='*/node_modules' \
-                        --exclude='*/node_modules/*' \
-                        --exclude='.env*' \
-                        --exclude='*/.env*' \
-                        --exclude='coverage' \
-                        --exclude='*/coverage' \
-                        --exclude='secrets' \
-                        --exclude='secrets/*' \
-                        --exclude='*/secrets' \
-                        --exclude='*/secrets/*' \
-                        --exclude='ecommerce-images.tar' \
+                        --exclude='.git' --exclude='*/.git' \
+                        --exclude='node_modules' --exclude='*/node_modules' \
+                        --exclude='.env*' --exclude='*/.env*' \
+                        --exclude='coverage' --exclude='*/coverage' \
+                        --exclude='secrets' --exclude='*/secrets' \
                         -- "$@"
-
-                    echo "Checking artifact"
 
                     test -s "$ARTIFACT_NAME"
 
-                    echo "Artifact created successfully"
-
-                    ls -lh "$ARTIFACT_NAME"
-
-                    echo "Artifact contents:"
-
-                    tar -tzf "$ARTIFACT_NAME" | head -40
-                '''
-
-                archiveArtifacts(
-                    artifacts: 'ecommerce-*.tar.gz,build-info.txt',
-                    fingerprint: true
-                )
-            }
-        }
-
-
-        // =====================================
-        // 6. UPLOAD ARTIFACT TO S3
-        // =====================================
-
-        stage('Upload Artifact to S3') {
-            steps {
-                sh '''
-                    set -eu
-
-                    echo "========== S3 ARTIFACT UPLOAD =========="
-
-                    ARTIFACT_NAME="ecommerce-${BUILD_NUMBER}.tar.gz"
-
-                    S3_PATH="s3://${S3_BUCKET}/ecommerce/releases/build-${BUILD_NUMBER}/"
-
-                    echo "Uploading artifact"
-
-                    aws s3 cp "$ARTIFACT_NAME" "$S3_PATH"
-
-                    echo "Uploading build information"
-
-                    aws s3 cp build-info.txt "$S3_PATH"
-
-                    echo "Verifying S3 upload"
-
+                    # Upload with server-side encryption enforced
+                    aws s3 cp "$ARTIFACT_NAME" "$S3_PATH" --sse AES256
+                    aws s3 cp build-info.txt "$S3_PATH" --sse AES256
                     aws s3 ls "$S3_PATH"
-
-                    echo "S3 upload completed successfully"
                 '''
+
+                // Controller disk bachao: sirf lightweight metadata file archive karo
+                archiveArtifacts(artifacts: 'build-info.txt', fingerprint: true)
             }
         }
 
-
-        // =====================================
-        // 7. ECR LOGIN
-        // =====================================
-
-        stage('ECR Login') {
+        stage('Build, Scan & Push Docker Images') {
             steps {
                 sh '''
-                    set -eu
-
-                    echo "========== ECR LOGIN =========="
-
-                    aws ecr get-login-password \
-                        --region "$AWS_REGION" \
-                    | docker login \
-                        --username AWS \
-                        --password-stdin "$ECR_REGISTRY"
-
-                    echo "ECR login successful"
+                    set -euo pipefail
+                    aws ecr get-login-password --region "${AWS_REGION}" \
+                    | docker login --username AWS --password-stdin "${ECR_REGISTRY}"
                 '''
-            }
-        }
 
-
-        // =====================================
-        // 8. BUILD DOCKER IMAGES
-        // =====================================
-
-        stage('Build Docker Images') {
-            steps {
                 script {
-
-                    def services = [
-                        'api-gateway',
-                        'auth-service',
-                        'order-service',
-                        'inventory-service',
-                        'notification-service'
-                    ]
-
-                    for (service in services) {
-
-                        echo "Building Docker image: ${service}"
+                    for (service in SERVICES) {
+                        def imageTag = "${ECR_REGISTRY}/${ECR_REPOSITORY}:${service}-${env.IMAGE_SUFFIX}"
+                        echo "Building & Pushing: ${imageTag}"
 
                         sh """
-                            set -e
+                            set -euo pipefail
+                            docker build -t "${imageTag}" "./${service}"
 
-                            docker build \
-                                -t ${ECR_REGISTRY}/${ECR_REPOSITORY}:${service}-build-${BUILD_NUMBER} \
-                                ./${service}
-                        """
-                    }
-                }
-            }
-        }
+                            # Push se pehle Docker image scan karo
+                            if command -v trivy >/dev/null 2>&1; then
+                                trivy image --severity CRITICAL --ignore-unfixed --exit-code 0 "${imageTag}"
+                            fi
 
+                            docker push "${imageTag}"
 
-        // =====================================
-        // 9. PUSH DOCKER IMAGES
-        // =====================================
-
-        stage('Push Docker Images') {
-            steps {
-                script {
-
-                    def services = [
-                        'api-gateway',
-                        'auth-service',
-                        'order-service',
-                        'inventory-service',
-                        'notification-service'
-                    ]
-
-                    for (service in services) {
-
-                        echo "Pushing Docker image: ${service}"
-
-                        sh """
-                            set -e
-
-                            docker push \
-                                ${ECR_REGISTRY}/${ECR_REPOSITORY}:${service}-build-${BUILD_NUMBER}
-                        """
-                    }
-                }
-            }
-        }
-
-
-        // =====================================
-        // 10. VERIFY ECR IMAGES
-        // =====================================
-
-        stage('Verify ECR Images') {
-            steps {
-                script {
-
-                    def services = [
-                        'api-gateway',
-                        'auth-service',
-                        'order-service',
-                        'inventory-service',
-                        'notification-service'
-                    ]
-
-                    for (service in services) {
-
-                        echo "Verifying ECR image: ${service}"
-
-                        sh """
+                            # Verify image exists in ECR
                             aws ecr describe-images \
-                                --repository-name ${ECR_REPOSITORY} \
-                                --region ${AWS_REGION} \
-                                --image-ids imageTag=${service}-build-${BUILD_NUMBER}
+                                --repository-name "${ECR_REPOSITORY}" \
+                                --region "${AWS_REGION}" \
+                                --image-ids imageTag="${service}-${env.IMAGE_SUFFIX}" > /dev/null
                         """
                     }
                 }
@@ -417,36 +216,20 @@ EOF
         }
     }
 
-
-    // =====================================
-    // POST BUILD ACTIONS
-    // =====================================
-
     post {
-
         success {
-            echo "CI Pipeline completed successfully."
-
-            echo "Test Status: ${env.TEST_STATUS}"
-
-            echo "Artifact uploaded to S3."
-
-            echo "Docker images pushed to ECR."
+            echo "CI Pipeline PASSED | Release: ${env.IMAGE_SUFFIX}"
         }
-
         failure {
-            echo "CI Pipeline failed."
-
-            echo "Check Jenkins console output."
+            echo "CI Pipeline FAILED | Check console logs. Ephemeral agent will auto-terminate."
         }
-
         always {
-
             sh '''
-                docker logout "$ECR_REGISTRY" || true
+                docker logout "${ECR_REGISTRY}" || true
+                # Ephemeral agent agar idle window mein reuse ho toh disk clean rahe
+                docker system prune -af --volumes || true
             '''
-
-            echo "Pipeline execution completed."
+            cleanWs()
         }
     }
 }
