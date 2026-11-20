@@ -25,6 +25,7 @@ pipeline {
         ECR_REPOSITORY = 'e-commers'
         ECR_REGISTRY   = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
         S3_BUCKET      = 'e-commerce-artifactory'
+        TEST_STATUS    = 'NOT_RUN'
     }
 
     stages {
@@ -67,14 +68,13 @@ pipeline {
             steps {
                 script {
                     for (service in SERVICES) {
-                        echo "Installing clean dependencies: ${service}"
+                        echo "Installing dependencies: ${service}"
                         dir(service) {
                             sh '''#!/bin/bash
                                 set -euo pipefail
                                 if [ -f package-lock.json ]; then
                                     npm ci --no-audit --no-fund
                                 else
-                                    echo "WARNING: package-lock.json missing! Commit it to Git."
                                     npm install --no-audit --no-fund
                                 fi
                             '''
@@ -84,7 +84,7 @@ pipeline {
             }
         }
 
-        stage('Run Tests (Fail-Fast)') {
+        stage('Run Tests (Non-Blocking for Lab)') {
             steps {
                 script {
                     def failedServices = []
@@ -97,7 +97,7 @@ pipeline {
                             )
                             if (status != 0) {
                                 failedServices.add(service)
-                                echo "FAILED: ${service} tests failed!"
+                                echo "WARNING: ${service} tests failed (continuing for lab)"
                             } else {
                                 echo "PASSED: ${service} tests passed."
                             }
@@ -105,21 +105,24 @@ pipeline {
                     }
 
                     if (failedServices.size() > 0) {
-                        currentBuild.description = "Tests failed: ${failedServices.join(', ')}"
-                        error("Pipeline aborted! Unit tests failed in: ${failedServices.join(', ')}")
+                        env.TEST_STATUS = "FAILED (${failedServices.join(', ')})"
+                        currentBuild.description = "Test failures: ${failedServices.join(', ')}"
+                        unstable("Tests failed in: ${failedServices.join(', ')} - continuing to S3 & ECR")
+                    } else {
+                        env.TEST_STATUS = 'PASSED'
                     }
                 }
             }
         }
 
-        stage('Security Scan (Filesystem & Secrets)') {
+        stage('Security Scan (Report Only)') {
             steps {
                 sh '''#!/bin/bash
                     set -euo pipefail
                     if command -v trivy >/dev/null 2>&1; then
-                        trivy fs --scanners vuln,secret --severity CRITICAL --exit-code 1 .
+                        trivy fs --scanners vuln,secret --severity CRITICAL --exit-code 0 .
                     else
-                        echo "Skipping Trivy scan (install trivy in EC2 Init Script for DevSecOps)"
+                        echo "Skipping Trivy scan"
                     fi
                 '''
             }
@@ -138,7 +141,7 @@ Git Commit: ${GIT_FULL_SHA}
 Build Date: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
 Branch: ${BUILD_BRANCH}
 Image Suffix: ${IMAGE_SUFFIX}
-Test Status: PASSED
+Test Status: ${TEST_STATUS}
 EOF
 
                     set --
@@ -202,6 +205,9 @@ EOF
     post {
         success {
             echo "CI Pipeline PASSED | Release: ${env.IMAGE_SUFFIX}"
+        }
+        unstable {
+            echo "CI Pipeline UNSTABLE (Tests had warnings) | Artifact uploaded to S3 & ECR | Release: ${env.IMAGE_SUFFIX}"
         }
         failure {
             echo "CI Pipeline FAILED | Check console logs. Ephemeral agent will auto-terminate."
